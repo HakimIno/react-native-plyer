@@ -256,7 +256,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         isFullscreen={videoState.isFullscreen}
         onClose={handleBottomSheetClose}
       >
-        <VideoOptionsContent />
+        <VideoOptionsContent isVisible={isBottomSheetVisible} />
       </BottomSheet>
     </View>
   );

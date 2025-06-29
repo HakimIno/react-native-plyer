@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, Dimensions } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '../../../../store';
@@ -7,16 +7,21 @@ import { setPlaybackRate } from '../../../../store/slices/videoSlice';
 
 interface PlaybackSpeedSelectorProps {
   onBackPress: () => void;
-  isLandscape?: boolean;
 }
 
 const PlaybackSpeedSelector: React.FC<PlaybackSpeedSelectorProps> = ({
   onBackPress,
-  isLandscape = false,
 }) => {
   const dispatch = useDispatch();
+  const windowDimensions = useWindowDimensions();
   const selectedSpeed = useSelector((state: RootState) => state.video.playbackRate, 
     (left, right) => left === right
+  );
+
+  // Use internal orientation detection for real-time updates
+  const isLandscape = useMemo(() => 
+    windowDimensions.width > windowDimensions.height,
+    [windowDimensions.width, windowDimensions.height]
   );
   const playbackSpeedOptions = useMemo(() => [
     { speed: 0.25, label: '0.25x' },

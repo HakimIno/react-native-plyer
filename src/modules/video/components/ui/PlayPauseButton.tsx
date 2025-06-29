@@ -49,8 +49,8 @@ export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
       style={[
         styles.button,
         {
-          width: size,
-          height: size,
+          width: size - 5,
+          height: size - 5,
           borderRadius: size / 2,
           backgroundColor: backgroundColor,
 

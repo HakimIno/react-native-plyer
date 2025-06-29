@@ -309,7 +309,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               </Animated.View>
               <Animated.View style={[styles.thumb, thumbStyle]}>
                 <LinearGradient
-                  colors={['#ffffff', '#ffffff', '#ffffff']}
+                  colors={['#007AFF', '#007AFF', '#007AFF']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.gradientThumb}

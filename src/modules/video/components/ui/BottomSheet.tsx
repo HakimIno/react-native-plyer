@@ -1,5 +1,5 @@
 import React, { useEffect, useImperativeHandle, forwardRef, useState, useMemo, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, Text, ViewStyle } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Text, ViewStyle, useWindowDimensions } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -101,34 +101,34 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
       return () => subscription?.remove();
     }, []);
 
-    // Animation functions
-    const open = () => {
-      'worklet';
-      active.value = true;
-      const currentHeight = isLandscape.value
-        ? screenHeight.value * SHEET_HEIGHT_LANDSCAPE
-        : screenHeight.value * SHEET_HEIGHT_PORTRAIT;
-      const maxTranslateY = -currentHeight;
-      
-      translateY.value = withTiming(maxTranslateY, {
-        duration: ANIMATION_DURATION,
-        easing: Easing.out(Easing.quad),
-      });
-    };
+      // Animation functions
+  const open = useCallback(() => {
+    'worklet';
+    active.value = true;
+    const currentHeight = isLandscape.value
+      ? screenHeight.value * SHEET_HEIGHT_LANDSCAPE
+      : screenHeight.value * SHEET_HEIGHT_PORTRAIT;
+    const maxTranslateY = -currentHeight;
+    
+    translateY.value = withTiming(maxTranslateY, {
+      duration: ANIMATION_DURATION,
+      easing: Easing.out(Easing.quad),
+    });
+  }, []);
 
-    const close = () => {
-      'worklet';
-      active.value = false;
-      translateY.value = withTiming(0, {
-        duration: CLOSE_ANIMATION_DURATION,
-        easing: Easing.out(Easing.quad),
-      });
-    };
+  const close = useCallback(() => {
+    'worklet';
+    active.value = false;
+    translateY.value = withTiming(0, {
+      duration: CLOSE_ANIMATION_DURATION,
+      easing: Easing.out(Easing.quad),
+    });
+  }, []);
 
-    const isActive = () => active.value;
+      const isActive = useCallback(() => active.value, []);
 
-    // Imperative handle
-    useImperativeHandle(ref, () => ({ open, close, isActive }), []);
+  // Imperative handle
+  useImperativeHandle(ref, () => ({ open, close, isActive }), [open, close, isActive]);
 
     // Visibility effect
     useEffect(() => {
@@ -255,52 +255,54 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
 );
 
 // VideoOptionsContent
-const VideoOptionsContent: React.FC = () => {
-  const [screenData, setScreenData] = useState(getScreenDimensions);
+interface VideoOptionsContentProps {
+  isVisible?: boolean;
+}
+
+const VideoOptionsContent: React.FC<VideoOptionsContentProps> = ({ isVisible = true }) => {
+  const windowDimensions = useWindowDimensions();
   const [currentView, setCurrentView] = useState<'main' | 'playback-speed'>('main');
   const selectedSpeed = useSelector((state: RootState) => state.video.playbackRate);
-  
-  // Animation for slide transition
-  const slideX = useSharedValue(0);
 
+  // Reset to main view when bottom sheet is closed
   useEffect(() => {
-    const handleDimensionChange = ({ window }: { window: { width: number; height: number } }) => {
-      const newData = {
-        width: window.width,
-        height: window.height,
-        isLandscape: window.width > window.height,
-      };
-      setScreenData(prevData => {
-        // Only update if data actually changed
-        if (prevData.width !== newData.width || 
-            prevData.height !== newData.height || 
-            prevData.isLandscape !== newData.isLandscape) {
-          return newData;
-        }
-        return prevData;
-      });
-    };
+    if (!isVisible) {
+      setCurrentView('main');
+    }
+  }, [isVisible]);
+  
+  // Calculate screen data from window dimensions for real-time updates
+  const screenData = useMemo(() => ({
+    width: windowDimensions.width,
+    height: windowDimensions.height,
+    isLandscape: windowDimensions.width > windowDimensions.height,
+  }), [windowDimensions.width, windowDimensions.height]);
+  
+  // Animation for slide transition - use shared values for better performance
+  const slideX = useSharedValue(0);
+  const screenWidth = useSharedValue(screenData.width);
 
-    const subscription = Dimensions.addEventListener('change', handleDimensionChange);
-    return () => subscription?.remove();
-  }, []);
+  // Update screen width shared value when screen data changes
+  useEffect(() => {
+    screenWidth.value = screenData.width;
+  }, [screenData.width]);
 
-  // Animate slide transition when currentView changes
+  // Animate slide transition when currentView changes - optimized version
   useEffect(() => {
     if (currentView === 'playback-speed') {
-      // Slide to show playback speed view (slide main view to left, bring speed view from right)
-      slideX.value = withTiming(-screenData.width, {
-        duration: 300,
-        easing: Easing.out(Easing.quad),
+      // Slide to show playback speed view - faster animation
+      slideX.value = withTiming(-screenWidth.value, {
+        duration: 200, // Reduced from 300ms
+        easing: Easing.out(Easing.cubic), // More responsive easing
       });
     } else {
-      // Slide back to main view (slide speed view to right, bring main view from left)
+      // Slide back to main view - faster animation
       slideX.value = withTiming(0, {
-        duration: 300,
-        easing: Easing.out(Easing.quad),
+        duration: 200, // Reduced from 300ms
+        easing: Easing.out(Easing.cubic), // More responsive easing
       });
     }
-  }, [currentView, screenData.width]);
+  }, [currentView, slideX, screenWidth]); // Added dependencies for completeness
 
   const mainOptions = useMemo(() => [
     { id: 'playback-speed', title: 'Playback Speed', icon: 'speedometer-outline' as const },
@@ -341,7 +343,7 @@ const VideoOptionsContent: React.FC = () => {
 
   const speedViewStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ translateX: slideX.value + screenData.width }],
+      transform: [{ translateX: slideX.value + screenWidth.value }],
     };
   });
 
@@ -370,7 +372,6 @@ const VideoOptionsContent: React.FC = () => {
         <Animated.View style={[styles.slideView, speedViewStyle]}>
           <PlaybackSpeedSelector
             onBackPress={handleBackPress}
-            isLandscape={screenData.isLandscape}
           />
         </Animated.View>
       </View>
