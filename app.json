@@ -30,7 +30,7 @@
       [
         "expo-screen-orientation",
         {
-          "initialOrientation": "default"
+          "initialOrientation": "DEFAULT"
         }
       ]
     ]

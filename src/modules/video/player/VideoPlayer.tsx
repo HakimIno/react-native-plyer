@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, Dimensions, TouchableWithoutFeedback, StatusBar, ActivityIndicator } from 'react-native';
 import Video from 'react-native-video';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -14,6 +14,7 @@ import { PlayPauseButton } from '../../ui/components/PlayPauseButton';
 import { ProgressBar } from '../../ui/components/ProgressBar';
 import { SeekButtons } from '../../ui/components/SeekButtons';
 import OptionsButton from '../../ui/components/OptionsButoon';
+import BottomSheet, { VideoOptionsContent, BottomSheetRefProps } from '../../ui/components/BottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface VideoPlayerProps {
@@ -41,6 +42,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
 
   const [showControls, setShowControls] = useState(true);
   const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [isBottomSheetVisible, setIsBottomSheetVisible] = useState(false);
   const [screenData, setScreenData] = useState(() => {
     const screen = Dimensions.get('screen');
     return {
@@ -51,6 +53,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
   });
 
   const controlsOpacity = useSharedValue(1);
+  const bottomSheetRef = useRef<BottomSheetRefProps>(null);
 
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ screen }) => {
@@ -161,6 +164,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
     showControlsHandler();
   };
 
+  const handleOptionsPress = () => {
+    setIsBottomSheetVisible(true);
+    showControlsHandler();
+  };
+
+  const handleBottomSheetClose = () => {
+    setIsBottomSheetVisible(false);
+  };
+
   const containerStyle = [
     styles.container,
     videoState.isFullscreen && styles.fullscreenContainer,
@@ -173,7 +185,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
   ];
 
   const topControlsStyle = [
-    styles.topControls, { top: top, right: 10 },
+    styles.topControls, { top: top, right: 20 },
     screenData.isLandscape && styles.topControlsLandscape
   ];
 
@@ -256,8 +268,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
             <View style={topControlsStyle}>
               <OptionsButton
                 isOptions={true}
-                onPress={() => { }}
-                size={30}
+                onPress={handleOptionsPress}
+                size={25}
                 color="#fff"
               />
             </View>
@@ -281,6 +293,15 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
           </Animated.View>
         </View>
       </TouchableWithoutFeedback>
+
+      {/* Bottom Sheet */}
+      <BottomSheet
+        ref={bottomSheetRef}
+        isVisible={isBottomSheetVisible}
+        onClose={handleBottomSheetClose}
+      >
+        <VideoOptionsContent />
+      </BottomSheet>
     </View>
   );
 };

@@ -11,7 +11,7 @@ interface OptionsButtonProps {
     color?: string;
 }
 
-const OptionsButton: React.FC<OptionsButtonProps> = ({ size, color }) => {
+const OptionsButton: React.FC<OptionsButtonProps> = ({ size, color, onPress, isOptions }) => {
 
     const scale = useSharedValue(1);
 
@@ -20,7 +20,7 @@ const OptionsButton: React.FC<OptionsButtonProps> = ({ size, color }) => {
             withSpring(0.8, { damping: 15, stiffness: 300 }),
             withSpring(1, { damping: 15, stiffness: 300 })
         );
-        // onPress();
+        onPress?.();
     };
 
     const animatedStyle = useAnimatedStyle(() => {

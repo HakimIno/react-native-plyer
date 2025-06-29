@@ -54,10 +54,16 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const currentScreenWidth = screenWidth || Dimensions.get('screen').width;
   const progressWidth = currentScreenWidth - 40; // 20px padding on each side
   const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const progress = useSharedValue(0);
   const thumbScale = useSharedValue(1);
   const barHeight = useSharedValue(2);
+  
+  // Derived value for seeking preview position to follow animated progress
+  const seekingPreviewPosition = useDerivedValue(() => {
+    return Math.min(currentScreenWidth - 100, Math.max(50, progress.value + 20));
+  });
 
   const effectiveTime = userSeekTime !== null ? userSeekTime : currentTime;
   const effectiveProgress = duration > 0 ? (effectiveTime / duration) * progressWidth : 0;
@@ -82,6 +88,18 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     }
   }, [currentTime, userSeekTime, isSeekingInProgress, isDragging]);
 
+  // Cleanup timeouts on unmount
+  React.useEffect(() => {
+    return () => {
+      if (seekTimeoutRef.current) {
+        clearTimeout(seekTimeoutRef.current);
+      }
+      if (previewTimeoutRef.current) {
+        clearTimeout(previewTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleSeek = (seekTime: number) => {
     const clampedTime = Math.max(0, Math.min(duration, seekTime));
 
@@ -105,6 +123,19 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   const setSeekingPreview = (show: boolean) => {
     setShowSeekingPreview(show);
+    
+    // Clear existing timeout
+    if (previewTimeoutRef.current) {
+      clearTimeout(previewTimeoutRef.current);
+      previewTimeoutRef.current = null;
+    }
+    
+    // Set 3-second timeout to hide preview if showing
+    if (show) {
+      previewTimeoutRef.current = setTimeout(() => {
+        setShowSeekingPreview(false);
+      }, 3000);
+    }
   };
 
   const updatePreviewTime = (time: number) => {
@@ -188,6 +219,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     };
   });
 
+  const seekingPreviewStyle = useAnimatedStyle(() => {
+    return {
+      left: seekingPreviewPosition.get(),
+    };
+  });
+
   return (
     <View style={styles.container}>
       {showTimeLabels && (
@@ -205,11 +242,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
       {/* Seeking Preview */}
       {showSeekingPreview && (
-        <View style={[styles.seekingPreview, { left: Math.min(currentScreenWidth - 100, Math.max(50, effectiveProgress + 20)) }]}>
+        <Animated.View style={[styles.seekingPreview, seekingPreviewStyle]}>
           <Text style={styles.seekingText}>
             {formatTime(previewTimeValue)}
           </Text>
-        </View>
+        </Animated.View>
       )}
 
       <View style={styles.progressContainer}>

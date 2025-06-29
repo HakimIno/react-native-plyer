@@ -55,7 +55,15 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       thumbnail: 'https://images.pexels.com/photos/281260/pexels-photo-281260.jpeg?cs=srgb&dl=pexels-francesco-ungaro-281260.jpg&fm=jpg',
       duration: 100,
       isLocal: false,
-    }
+    },
+    {
+      id: '4',
+      title: 'Sprite Fight',
+      url: 'https://files.vidstack.io/sprite-fight/1080p.mp4',
+      thumbnail: 'https://files.vidstack.io/sprite-fight/poster.webp',
+      duration: 1000,
+      isLocal: false,
+    },
   ];
 
   useEffect(() => {
