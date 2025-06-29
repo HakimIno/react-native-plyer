@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Dimensions, Text, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Dimensions, Text, ActivityIndicator, Vibration } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -58,7 +58,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   const progress = useSharedValue(0);
   const thumbScale = useSharedValue(1);
-  const barHeight = useSharedValue(2);
+  const barHeight = useSharedValue(2.5);
   
   // Derived value for seeking preview position to follow animated progress
   const seekingPreviewPosition = useDerivedValue(() => {
@@ -106,6 +106,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     setUserSeekTime(clampedTime);
     setDisplayTime(clampedTime);
 
+    // Add haptic feedback
+    Vibration.vibrate(10);
+
     if (seekTimeoutRef.current) {
       clearTimeout(seekTimeoutRef.current);
     }
@@ -143,15 +146,26 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   };
 
   const panGesture = Gesture.Pan()
-    .onBegin(() => {
+    .hitSlop({ top: 20, bottom: 20, left: 10, right: 10 })
+    .minDistance(5) // Add minimum distance to distinguish from tap
+    .onBegin((event) => {
       runOnJS(setDragging)(true);
       runOnJS(setSeekingPreview)(true);
       thumbScale.value = withSpring(1.3, { damping: 15, stiffness: 200 });
       barHeight.value = withSpring(6, { damping: 15, stiffness: 200 });
+      
+      // Set initial position based on touch location
+      const clampedX = Math.max(0, Math.min(progressWidth, event.x));
+      progress.value = clampedX;
+      
+      if (duration > 0) {
+        const seekTime = (clampedX / progressWidth) * duration;
+        runOnJS(updatePreviewTime)(seekTime);
+        runOnJS(setDisplayTime)(seekTime);
+      }
     })
     .onUpdate((event) => {
       const clampedX = Math.max(0, Math.min(progressWidth, event.x));
-
       progress.value = clampedX;
 
       if (duration > 0) {
@@ -175,6 +189,8 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     });
 
   const tapGesture = Gesture.Tap()
+    .hitSlop({ top: 20, bottom: 20, left: 10, right: 10 })
+    .maxDuration(250) // Quick tap only
     .onEnd((event) => {
       const clampedX = Math.max(0, Math.min(progressWidth, event.x));
 
@@ -252,23 +268,29 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       <View style={styles.progressContainer}>
         <GestureDetector gesture={composedGesture}>
           <View style={[styles.progressTrack, { width: progressWidth }]}>
-            <Animated.View style={[styles.trackBackground, trackStyle]} />
-            <Animated.View style={[styles.progressFill, progressStyle, progressBarStyle]}>
-              <LinearGradient
-                colors={['#007AFF', '#007AFF', '#007AFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.gradientFill}
-              />
-            </Animated.View>
-            <Animated.View style={[styles.thumb, thumbStyle]}>
-              <LinearGradient
-                colors={['#ffffff', '#ffffff', '#ffffff']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.gradientThumb}
-              />
-            </Animated.View>
+            {/* Invisible touch area */}
+            <View style={styles.touchArea} />
+            
+            {/* Visual progress bar */}
+            <View style={styles.visualTrack}>
+              <Animated.View style={[styles.trackBackground, trackStyle]} />
+              <Animated.View style={[styles.progressFill, progressStyle, progressBarStyle]}>
+                <LinearGradient
+                  colors={['#007AFF', '#007AFF', '#007AFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.gradientFill}
+                />
+              </Animated.View>
+              <Animated.View style={[styles.thumb, thumbStyle]}>
+                <LinearGradient
+                  colors={['#ffffff', '#ffffff', '#ffffff']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.gradientThumb}
+                />
+              </Animated.View>
+            </View>
           </View>
         </GestureDetector>
       </View>
@@ -278,7 +300,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 10,
+    paddingBottom: 0,
   },
   timeContainer: {
     flexDirection: 'row',
@@ -325,11 +347,25 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 10,
+    paddingTop: 0,
+    paddingBottom: 0,
   },
   progressTrack: {
-    height: 0,
+    justifyContent: 'center',
+    position: 'relative',
+    paddingBottom: 20,
+    height: 40,
+  },
+  touchArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+  },
+  visualTrack: {
+    height: 6, // Visual height of the progress bar
     justifyContent: 'center',
     position: 'relative',
   },
