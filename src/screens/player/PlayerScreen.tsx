@@ -5,7 +5,7 @@ import { VideoPlayer } from '../../modules/video/player/VideoPlayer';
 export const PlayerScreen: React.FC = () => {
   return (
     <View style={styles.container}>
-      <VideoPlayer  />
+      <VideoPlayer autoPlay={true} />
     </View>
   );
 };

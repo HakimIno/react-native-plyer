@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
@@ -33,6 +33,7 @@ interface VideoPlayerProps {
   optionsButtonSize?: number;
   showTimeLabels?: boolean;
   resizeMode?: 'contain' | 'cover' | 'stretch';
+  autoPlay?: boolean;
   
   // Orientation props
   orientationPreset?: OrientationPreset;
@@ -63,6 +64,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   optionsButtonSize = DEFAULT_OPTIONS_BUTTON_SIZE,
   showTimeLabels = true,
   resizeMode = 'contain',
+  autoPlay = false,
   orientationPreset = 'AUTO',
   allowFreeRotation,
   enableSmartLocking,
@@ -100,6 +102,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     seek,
     seekBackward,
     seekForward,
+    play,
   } = useVideoPlayer();
 
   const {
@@ -181,6 +184,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   const handleVideoLoad = (data: any) => {
     handleLoad(data);
     onVideoLoad?.(data);
+    
+    // Auto-start video if autoPlay is enabled
+    if (autoPlay && !videoState.isPlaying) {
+      play();
+    }
   };
 
   const handleVideoEnd = () => {

@@ -19,7 +19,7 @@ export const VideoTopControls: React.FC<VideoTopControlsProps> = ({
 }) => {
   const topControlsStyle = [
     styles.topControls,
-    { top: safeAreaTop, right: 20 },
+    { top: safeAreaTop + 20, right: 20 },
     isLandscape && styles.topControlsLandscape
   ];
 
@@ -40,6 +40,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   topControlsLandscape: {
-    top: 10,
+    top: 20,
   },
 }); 

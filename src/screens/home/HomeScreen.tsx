@@ -9,7 +9,10 @@ import {
   Alert,
   SafeAreaView,
   Image,
-  StatusBar, 
+  StatusBar,
+  Platform, // Import Platform for OS-specific adjustments
+  LayoutAnimation, // For subtle animations
+  UIManager, // Required for LayoutAnimation on Android
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +21,13 @@ import { useVideoPlayer, useVideoPlaylist } from '../../modules/video/hooks/useV
 import { isValidVideoUrl } from '../../modules/video/utility/helpers/networkUtils';
 import { formatTime } from '../../modules/video/utility/helpers/timeUtils';
 import { getCachedVideoThumbnail } from '../../modules/video/utility/helpers/thumbnailUtils';
+
+// Enable LayoutAnimation for Android
+if (Platform.OS === 'android') {
+  if (UIManager.setLayoutAnimationEnabledExperimental) {
+    UIManager.setLayoutAnimationEnabledExperimental(true);
+  }
+}
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -75,22 +85,25 @@ const HomeScreen = ({ navigation }: Props) => {
     }
   }, []);
 
+  // Animate form visibility
+  useEffect(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+  }, [showAddForm]);
+
   const handleAddVideo = async () => {
     if (!newVideoUrl.trim()) {
-      Alert.alert('Error', 'Please enter a video URL');
+      Alert.alert('Missing URL', 'Please enter a video URL to add.');
       return;
     }
 
     if (!isValidVideoUrl(newVideoUrl)) {
-      Alert.alert('Error', 'Please enter a valid video URL');
+      Alert.alert('Invalid URL', 'The URL you entered is not valid. Please check and try again.');
       return;
     }
 
-    // Show loading state
-    Alert.alert('Processing', 'Adding video and generating thumbnail...');
+    Alert.alert('Adding Video', 'Please wait while we add your video and generate a thumbnail...', [], { cancelable: false });
 
     try {
-      // Generate thumbnail for the new video
       const generatedThumbnail = await getCachedVideoThumbnail(
         newVideoUrl.trim(),
         undefined,
@@ -109,16 +122,16 @@ const HomeScreen = ({ navigation }: Props) => {
       setNewVideoUrl('');
       setNewVideoTitle('');
       setShowAddForm(false);
-      Alert.alert('Success', 'Video added to playlist with auto-generated thumbnail!');
+      Alert.alert('Success!', 'Video added to playlist with auto-generated thumbnail.');
     } catch (error) {
-      console.log('Error adding video:', error);
+      console.log('Error adding video or generating thumbnail:', error);
       
-      // Still add the video but without thumbnail
+      // Still add the video but with a fallback thumbnail
       const newVideo: VideoItem = {
         id: Date.now().toString(),
         title: newVideoTitle.trim() || 'Untitled Video',
         url: newVideoUrl.trim(),
-        thumbnail: 'https://via.placeholder.com/320x180?text=Video',
+        thumbnail: 'https://via.placeholder.com/320x180?text=Video', // Fallback placeholder
         isLocal: false,
       };
 
@@ -126,7 +139,10 @@ const HomeScreen = ({ navigation }: Props) => {
       setNewVideoUrl('');
       setNewVideoTitle('');
       setShowAddForm(false);
-      Alert.alert('Success', 'Video added to playlist! (Thumbnail generation failed, but video is ready to play)');
+      Alert.alert(
+        'Added with Caveat',
+        'Video added to playlist, but thumbnail generation failed. It should still play fine!'
+      );
     }
   };
 
@@ -174,7 +190,6 @@ const HomeScreen = ({ navigation }: Props) => {
   }, [videoList]);
 
   const renderVideoItem = ({ item, index }: { item: VideoItem; index: number }) => {
-    // Get thumbnail from cache or use original
     const currentThumbnail = thumbnailCache.get(item.id) || item.thumbnail;
     const isGeneratingThumbnail = !currentThumbnail || currentThumbnail === '' || currentThumbnail.includes('placeholder');
 
@@ -182,7 +197,7 @@ const HomeScreen = ({ navigation }: Props) => {
       <TouchableOpacity
         style={styles.videoCard}
         onPress={() => handlePlayVideo(item, index)}
-        activeOpacity={0.7}
+        activeOpacity={0.8} // Slightly less opaque feedback
       >
         <View style={styles.thumbnailContainer}>
           {currentThumbnail && !isGeneratingThumbnail ? (
@@ -192,11 +207,12 @@ const HomeScreen = ({ navigation }: Props) => {
               resizeMode="cover"
               onError={() => {
                 console.log('Failed to load thumbnail:', currentThumbnail);
+                // Optionally set a specific error placeholder for this item
               }}
             />
           ) : (
             <View style={styles.thumbnailPlaceholder}>
-              <Ionicons name="image-outline" size={40} color="#666" />
+              <Ionicons name="image-outline" size={48} color="#666" />
               <Text style={styles.thumbnailPlaceholderText}>
                 {isGeneratingThumbnail ? 'Generating Thumbnail...' : 'No Thumbnail'}
               </Text>
@@ -214,7 +230,7 @@ const HomeScreen = ({ navigation }: Props) => {
 
           {/* Play Icon Overlay */}
           <View style={styles.playOverlay}>
-            <Ionicons name="play-circle" size={50} color="#fff" />
+            <Ionicons name="play-circle" size={56} color="#fff" />
           </View>
         </View>
 
@@ -223,9 +239,9 @@ const HomeScreen = ({ navigation }: Props) => {
             {item.title}
           </Text>
           <View style={styles.videoMeta}>
-            <Ionicons name={item.isLocal ? 'phone-portrait-outline' : 'globe-outline'} size={16} color="#b0b0b0" />
+            <Ionicons name={item.isLocal ? 'phone-portrait-outline' : 'globe-outline'} size={18} color="#aaa" />
             <Text style={styles.videoType}>
-              {item.isLocal ? 'Local' : 'Online'}
+              {item.isLocal ? 'Local Video' : 'Online Stream'}
             </Text>
           </View>
         </View>
@@ -258,19 +274,21 @@ const HomeScreen = ({ navigation }: Props) => {
           <TextInput
             style={styles.input}
             placeholder="Enter video URL (e.g., https://example.com/video.mp4)"
-            placeholderTextColor="#888"
+            placeholderTextColor="#999"
             value={newVideoUrl}
             onChangeText={setNewVideoUrl}
             autoCapitalize="none"
             autoCorrect={false}
             keyboardType="url"
+            returnKeyType="done"
           />
           <TextInput
             style={styles.input}
             placeholder="Video title (optional)"
-            placeholderTextColor="#888"
+            placeholderTextColor="#999"
             value={newVideoTitle}
             onChangeText={setNewVideoTitle}
+            returnKeyType="done"
           />
           <TouchableOpacity style={styles.submitButton} onPress={handleAddVideo}>
             <Text style={styles.submitButtonText}>Add Video to Playlist</Text>
@@ -286,9 +304,11 @@ const HomeScreen = ({ navigation }: Props) => {
 
         {videoList.length === 0 ? (
           <View style={styles.emptyPlaylistContainer}>
-            <Ionicons name="film-outline" size={60} color="#666" />
+            <Ionicons name="film-outline" size={70} color="#666" />
             <Text style={styles.emptyPlaylistText}>Your playlist is empty!</Text>
-            <Text style={styles.emptyPlaylistSubText}>Add a video using the '+' button above.</Text>
+            <Text style={styles.emptyPlaylistSubText}>
+              Tap the '+' button at the top right to add your first video.
+            </Text>
           </View>
         ) : (
           <FlatList
@@ -308,117 +328,127 @@ const HomeScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a', // Deeper black for more premium feel
+    backgroundColor: '#0a0a0a',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingTop: 5,
-    paddingBottom: 5,
+    paddingHorizontal: 18, // Increased padding
+    paddingVertical: 12, // Increased vertical padding
     backgroundColor: 'rgba(18, 18, 18, 0.95)',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+    borderBottomWidth: StyleSheet.hairlineWidth, // Thinner border
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    ...Platform.select({
+      ios: {
+        paddingTop: 0, // SafeAreaView handles this
+      },
+      android: {
+        paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 10,
+      },
+    }),
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 22, // Larger title
     fontWeight: '800',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.8, // Slightly more spacing
   },
   addButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 24,
+    width: 44, // Slightly larger touch target
+    height: 44,
+    borderRadius: 22, // Perfect circle
     backgroundColor: '#667eea',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 }, // Softer shadow
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   addVideoForm: {
     backgroundColor: 'rgba(20, 20, 20, 0.98)',
     padding: 24,
-    margin: 16,
-    borderRadius: 14,
+    marginHorizontal: 16,
+    marginBottom: 16, // Add some bottom margin
+    borderRadius: 16, // Slightly more rounded
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2, // Softer shadow
+    shadowRadius: 12,
+    elevation: 6,
+    borderWidth: StyleSheet.hairlineWidth, // Thinner border
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   input: {
     borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 16,
-    padding: 18,
-    marginBottom: 16,
+    borderColor: 'rgba(255, 255, 255, 0.15)', // Slightly more visible border
+    borderRadius: 12, // Softer input corners
+    padding: 16, // Reduced padding for better fit
+    marginBottom: 14, // Reduced margin
     fontSize: 16,
     color: '#ffffff',
     backgroundColor: 'rgba(40, 40, 40, 0.6)',
     fontWeight: '500',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    // Removed redundant shadow from input for cleaner look
   },
   submitButton: {
     backgroundColor: '#667eea',
-    padding: 18,
-    borderRadius: 16,
+    padding: 16, // Reduced padding
+    borderRadius: 12, // Match input radius
     alignItems: 'center',
     shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 4 }, // Softer shadow
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitButtonText: {
     color: '#ffffff',
-    fontSize: 18,
+    fontSize: 17, // Slightly smaller text
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   playlistSection: {
     flex: 1,
-    paddingHorizontal: 10,
-    paddingTop: 10,
+    paddingHorizontal: 18, // Increased padding
+    paddingTop: 15, // Increased padding
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    marginBottom: 10,
+    fontSize: 20, // Larger section title
+    fontWeight: '700', // Bolder
+    marginBottom: 15, // More space
     color: '#ffffff',
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
   listContainer: {
     paddingBottom: 40,
   },
   videoCard: {
-    backgroundColor: 'rgba(25, 25, 25, 0.6)',
-    borderRadius: 14,
+    backgroundColor: 'rgba(25, 25, 25, 0.7)', // Slightly more opaque
+    borderRadius: 16, // More rounded corners
     marginBottom: 20,
     overflow: 'hidden',
-
-    transform: [{ scale: 1 }], // For potential animation
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
+    borderWidth: StyleSheet.hairlineWidth, // Subtle border
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    transform: [{ scale: 1 }],
   },
   thumbnailContainer: {
     position: 'relative',
     aspectRatio: 16 / 9,
     backgroundColor: 'rgba(40, 40, 40, 0.8)',
+    justifyContent: 'center', // Center content when image is not loaded
+    alignItems: 'center',
   },
   thumbnail: {
     width: '100%',
     height: '100%',
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
   },
   thumbnailPlaceholder: {
     width: '100%',
@@ -426,27 +456,25 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(40, 40, 40, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
   },
   thumbnailPlaceholderText: {
     color: '#999',
-    marginTop: 12,
+    marginTop: 10, // Adjusted margin
     fontSize: 15,
     fontWeight: '500',
   },
   durationBadge: {
     position: 'absolute',
-    bottom: 12,
-    right: 12,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
+    bottom: 10, // Slightly closer to bottom
+    right: 10, // Slightly closer to right
+    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Slightly less opaque
+    paddingHorizontal: 8, // Slightly less padding
+    paddingVertical: 4, // Slightly less padding
+    borderRadius: 8, // Softer corners
   },
   durationText: {
     color: '#ffffff',
-    fontSize: 12,
+    fontSize: 11, // Slightly smaller font
     fontWeight: '700',
     letterSpacing: 0.5,
   },
@@ -458,55 +486,51 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Slightly more visible overlay
+    borderRadius: 16, // Match card radius
   },
   videoInfo: {
-    padding: 15,
+    padding: 16, // Consistent padding
   },
   videoTitle: {
-    fontSize: 18,
+    fontSize: 19, // Slightly larger title
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 12,
-    lineHeight: 24,
-    letterSpacing: 0.2,
+    marginBottom: 10, // Reduced margin
+    lineHeight: 26, // Better line height
+    letterSpacing: 0.3,
   },
   videoMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6, // Reduced gap
   },
   videoType: {
-    fontSize: 12,
-    color: '#b0b0b0',
+    fontSize: 13, // Slightly smaller
+    color: '#aaa', // Softer grey
     fontWeight: '600',
-  },
-  videoDuration: {
-    fontSize: 14,
-    color: '#b0b0b0',
-    fontWeight: '500',
   },
   emptyPlaylistContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 40,
-    marginTop: 60,
+    padding: 30, // Reduced padding
+    marginTop: 40, // Reduced top margin
   },
   emptyPlaylistText: {
-    fontSize: 22,
+    fontSize: 24, // Larger
     color: '#ffffff',
-    marginTop: 24,
-    fontWeight: '700',
+    marginTop: 20, // Adjusted margin
+    fontWeight: '800', // Bolder
     textAlign: 'center',
   },
   emptyPlaylistSubText: {
-    fontSize: 16,
+    fontSize: 15, // Slightly smaller
     color: '#888',
-    marginTop: 8,
+    marginTop: 10, // Adjusted margin
     textAlign: 'center',
     lineHeight: 22,
-    maxWidth: 280,
+    maxWidth: 300, // Wider
   },
 });
 

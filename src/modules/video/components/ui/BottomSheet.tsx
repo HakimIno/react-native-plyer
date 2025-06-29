@@ -17,7 +17,7 @@ import { RootState } from '../../../../store';
 import PlaybackSpeedSelector from './PlaybackSpeedSelector';
 
 // Constants
-const SHEET_HEIGHT_PORTRAIT = 0.3;
+const SHEET_HEIGHT_PORTRAIT = 0.35;
 const SHEET_HEIGHT_LANDSCAPE = 0.65;
 const ANIMATION_DURATION = 250;
 const CLOSE_ANIMATION_DURATION = 200;
@@ -223,7 +223,7 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
       height: sheetConfig.height,
       top: screenData.height,
       paddingBottom: bottom,
-      width: (screenData.isLandscape ? '50%' : '95%') as any,
+      width: (screenData.isLandscape ? '55%' : '93%') as any,
       alignSelf: 'center',
       maxWidth: screenData.isLandscape ? 600 : undefined,
       zIndex: sheetConfig.zIndex,

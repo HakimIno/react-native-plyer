@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import { TouchableOpacity, StyleSheet, Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
@@ -8,7 +8,7 @@ import Animated, {
   withSequence,
 } from 'react-native-reanimated';
 
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedTouchableOpacity = Animated.createAnimatedComponent(Pressable);
 
 interface FullscreenButtonProps {
   isFullscreen: boolean;
@@ -50,7 +50,6 @@ export const FullscreenButton: React.FC<FullscreenButtonProps> = ({
         animatedStyle,
       ]}
       onPress={handlePress}
-      activeOpacity={0.7}
     >
       <Ionicons
         name={isFullscreen ? "contract-outline" : "expand-outline"}
