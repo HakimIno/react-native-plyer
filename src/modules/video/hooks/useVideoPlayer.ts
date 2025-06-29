@@ -42,6 +42,8 @@ export const useVideoPlayer = () => {
     videoRef.current.setVolume?.(videoState.isMuted ? 0 : videoState.volume);
   }, [videoState.volume, videoState.isMuted]);
 
+  // Note: playback rate is handled by the `rate` prop in VideoContainer automatically
+
   const setVideoRef = (ref: any) => {
     videoRef.current = ref;
   };

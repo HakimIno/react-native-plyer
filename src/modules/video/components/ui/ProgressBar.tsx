@@ -255,7 +255,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
             <Animated.View style={[styles.trackBackground, trackStyle]} />
             <Animated.View style={[styles.progressFill, progressStyle, progressBarStyle]}>
               <LinearGradient
-                colors={['#a3e635', '#a3e635', '#a3e635']}
+                colors={['#007AFF', '#007AFF', '#007AFF']}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
                 style={styles.gradientFill}

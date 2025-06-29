@@ -2,4 +2,6 @@ export { BottomSheet, VideoOptionsContent, BottomSheetRefProps } from './BottomS
 export { PlayPauseButton } from './PlayPauseButton';
 export { ProgressBar } from './ProgressBar';
 export { SeekButtons } from './SeekButtons';
-export { OptionsButton } from './OptionsButoon';    
+export { OptionsButton } from './OptionsButoon';
+export { FullscreenButton } from './FullscreenButton';
+export { default as PlaybackSpeedSelector } from './PlaybackSpeedSelector';    

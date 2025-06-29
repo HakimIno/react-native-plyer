@@ -1,4 +1,4 @@
-import React, { useEffect, useImperativeHandle, forwardRef, useState, useMemo } from 'react';
+import React, { useEffect, useImperativeHandle, forwardRef, useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, Text, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -12,9 +12,12 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useSelector, shallowEqual } from 'react-redux';
+import { RootState } from '../../../../store';
+import PlaybackSpeedSelector from './PlaybackSpeedSelector';
 
 // Constants
-const SHEET_HEIGHT_PORTRAIT = 0.35;
+const SHEET_HEIGHT_PORTRAIT = 0.3;
 const SHEET_HEIGHT_LANDSCAPE = 0.65;
 const ANIMATION_DURATION = 250;
 const CLOSE_ANIMATION_DURATION = 200;
@@ -251,16 +254,27 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
   }
 );
 
-// Memoized VideoOptionsContent
-const VideoOptionsContent: React.FC = React.memo(() => {
+// VideoOptionsContent
+const VideoOptionsContent: React.FC = () => {
   const [screenData, setScreenData] = useState(getScreenDimensions);
+  const [currentView, setCurrentView] = useState<'main' | 'playback-speed'>('main');
+  const selectedSpeed = useSelector((state: RootState) => state.video.playbackRate);
 
   useEffect(() => {
     const handleDimensionChange = ({ window }: { window: { width: number; height: number } }) => {
-      setScreenData({
+      const newData = {
         width: window.width,
         height: window.height,
         isLandscape: window.width > window.height,
+      };
+      setScreenData(prevData => {
+        // Only update if data actually changed
+        if (prevData.width !== newData.width || 
+            prevData.height !== newData.height || 
+            prevData.isLandscape !== newData.isLandscape) {
+          return newData;
+        }
+        return prevData;
       });
     };
 
@@ -268,25 +282,64 @@ const VideoOptionsContent: React.FC = React.memo(() => {
     return () => subscription?.remove();
   }, []);
 
-  const options = useMemo(() => [
-    { id: 'playback-speed', title: 'Playback Speed', icon: 'speedometer-outline' },
-    { id: 'quality', title: 'Video Quality', icon: 'settings-outline' },
-    { id: 'subtitles', title: 'Subtitles', icon: 'chatbox-ellipses-outline' },
-    { id: 'audio', title: 'Audio Track', icon: 'volume-high-outline' },
+  const mainOptions = useMemo(() => [
+    { id: 'playback-speed', title: 'Playback Speed', icon: 'speedometer-outline' as const },
+    { id: 'quality', title: 'Video Quality', icon: 'settings-outline' as const },
+    { id: 'subtitles', title: 'Subtitles', icon: 'chatbox-ellipses-outline' as const },
+    { id: 'audio', title: 'Audio Track', icon: 'volume-high-outline' as const },
   ], []);
+
+  const handleMainOptionPress = useCallback((optionId: string) => {
+    switch (optionId) {
+      case 'playback-speed':
+        setCurrentView('playback-speed');
+        break;
+      case 'quality':
+        // Handle quality selection
+        break;
+      case 'subtitles':
+        // Handle subtitles selection
+        break;
+      case 'audio':
+        // Handle audio track selection
+        break;
+      default:
+        break;
+    }
+  }, []);
+
+  const handleBackPress = useCallback(() => {
+    setCurrentView('main');
+  }, []);
+
+  if (currentView === 'playback-speed') {
+    return (
+      <PlaybackSpeedSelector
+        onBackPress={handleBackPress}
+        isLandscape={screenData.isLandscape}
+      />
+    );
+  }
 
   return (
     <View style={[styles.optionsContainer, screenData.isLandscape && styles.optionsContainerLandscape]}>
-      {options.map((option) => (
-        <TouchableOpacity key={option.id} style={[styles.optionItem, screenData.isLandscape && styles.optionItemLandscape]}>
+      {mainOptions.map((option) => (
+        <TouchableOpacity 
+          key={option.id} 
+          style={[styles.optionItem, screenData.isLandscape && styles.optionItemLandscape]}
+          onPress={() => handleMainOptionPress(option.id)}
+        >
           <Ionicons name={option.icon as any} size={20} color="#fff" />
           <Text style={styles.optionText}>{option.title}</Text>
+          {option.id === 'playback-speed' && (
+            <Text style={styles.currentValueText}>{selectedSpeed}x</Text>
+          )}
           <Ionicons name="chevron-forward" size={20} color="#fff" />
         </TouchableOpacity>
       ))}
     </View>
   );
-});
+};
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -325,7 +378,7 @@ const styles = StyleSheet.create({
   optionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 18,
+    paddingVertical: 14,
   },
   optionItemLandscape: {
     paddingVertical: 14,
@@ -335,6 +388,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     marginLeft: 16,
     flex: 1,
+  },
+  currentValueText: {
+    fontSize: 14,
+    color: '#888',
+    marginRight: 8,
   },
 });
 
