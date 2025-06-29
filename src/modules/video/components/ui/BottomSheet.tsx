@@ -238,7 +238,7 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
     return (
       <>
         <GestureDetector gesture={tapGesture}>
-          <Animated.View style={[styles.backdrop, backdropStyle, rBackdropStyle]} />
+          <Animated.View style={[styles.backdrop, backdropStyle, rBackdropStyle]} pointerEvents={isVisible ? 'auto' : 'none'} />
         </GestureDetector>
 
         <GestureDetector gesture={panGesture}>
@@ -387,6 +387,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(10, 10, 10, 1)',
     position: 'absolute',
     borderRadius: 15,
+    pointerEvents: 'auto',
   },
   line: {
     width: 75,

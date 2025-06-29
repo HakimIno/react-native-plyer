@@ -2,7 +2,7 @@
   "expo": {
     "name": "VideoPlayerApp",
     "slug": "VideoPlayerApp",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -17,6 +17,8 @@
       "bundleIdentifier": "com.videoplayerapp.app"
     },
     "android": {
+      "versionCode": 2,
+      "package": "com.videoplayerapp.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -33,6 +35,17 @@
           "initialOrientation": "DEFAULT"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e5a72ca2-b8e5-42a0-816c-a963a9279b8c"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e5a72ca2-b8e5-42a0-816c-a963a9279b8c"
+    }
   }
 }
