@@ -1,5 +1,5 @@
-import React, { useEffect, useImperativeHandle, forwardRef, useCallback, useState } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, Text } from 'react-native';
+import React, { useEffect, useImperativeHandle, forwardRef, useState, useMemo } from 'react';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Text, ViewStyle } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -9,26 +9,30 @@ import Animated, {
   runOnJS,
   Easing,
 } from 'react-native-reanimated';
-import {
-  Gesture,
-  GestureDetector,
-} from 'react-native-gesture-handler';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
-const getScreenDimensions = () => {
-  const { width, height } = Dimensions.get('window');
-  return {
-    width,
-    height,
-    isLandscape: width > height,
-  };
-};
+// Constants
+const SHEET_HEIGHT_PORTRAIT = 0.35;
+const SHEET_HEIGHT_LANDSCAPE = 0.65;
+const ANIMATION_DURATION = 250;
+const CLOSE_ANIMATION_DURATION = 200;
+const Z_INDEX_NORMAL = 1500;
+const Z_INDEX_FULLSCREEN = 2000;
+
+// Types
+interface ScreenDimensions {
+  width: number;
+  height: number;
+  isLandscape: boolean;
+}
 
 interface BottomSheetProps {
   isVisible: boolean;
   onClose: () => void;
   children?: React.ReactNode;
+  isFullscreen?: boolean;
 }
 
 export interface BottomSheetRefProps {
@@ -37,70 +41,102 @@ export interface BottomSheetRefProps {
   open: () => void;
 }
 
+// Utilities
+const getScreenDimensions = (): ScreenDimensions => {
+  const { width, height } = Dimensions.get('window');
+  return {
+    width,
+    height,
+    isLandscape: width > height,
+  };
+};
+
+const calculateSheetHeight = (screenData: ScreenDimensions): number => {
+  const percentage = screenData.isLandscape ? SHEET_HEIGHT_LANDSCAPE : SHEET_HEIGHT_PORTRAIT;
+  return screenData.height * percentage;
+};
+
 export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
-  ({ isVisible, onClose, children }, ref) => {
+  ({ isVisible, onClose, children, isFullscreen = false }, ref) => {
     const { bottom } = useSafeAreaInsets();
+    
+    // Animated values
     const translateY = useSharedValue(0);
     const active = useSharedValue(false);
     const context = useSharedValue({ y: 0 });
     
+    // Screen dimensions
     const [screenData, setScreenData] = useState(getScreenDimensions);
+    
+    // Shared values for worklets
+    const screenHeight = useSharedValue(screenData.height);
+    const isLandscape = useSharedValue(screenData.isLandscape);
 
+    // Cached values to reduce calculations
+    const sheetConfig = useMemo(() => ({
+      height: calculateSheetHeight(screenData),
+      zIndex: isFullscreen ? Z_INDEX_FULLSCREEN : Z_INDEX_NORMAL,
+    }), [screenData, isFullscreen]);
+
+    // Update shared values when screen data changes
+    useEffect(() => {
+      screenHeight.value = screenData.height;
+      isLandscape.value = screenData.isLandscape;
+    }, [screenData]);
+
+    // Dimension change handler
     useEffect(() => {
       const subscription = Dimensions.addEventListener('change', ({ window }) => {
-        setScreenData({
-          width: window.width ,
+        const newData = {
+          width: window.width,
           height: window.height,
           isLandscape: window.width > window.height,
-        });
+        };
+        setScreenData(newData);
       });
 
       return () => subscription?.remove();
     }, []);
 
-    // Calculate dynamic values based on current orientation
-    const BOTTOM_SHEET_HEIGHT = screenData.isLandscape 
-      ? screenData.height * 0.75  // 75% in landscape
-      : screenData.height * 0.35; // 35% in portrait
-    
-    const MAX_TRANSLATE_Y = -BOTTOM_SHEET_HEIGHT;
-
-    const open = useCallback(() => {
+    // Animation functions
+    const open = () => {
       'worklet';
       active.value = true;
-      translateY.value = withTiming(MAX_TRANSLATE_Y, {
-        duration: 300,
-        easing: Easing.bezier(0.25, 0.1, 0.25, 1),
+      const currentHeight = isLandscape.value
+        ? screenHeight.value * SHEET_HEIGHT_LANDSCAPE
+        : screenHeight.value * SHEET_HEIGHT_PORTRAIT;
+      const maxTranslateY = -currentHeight;
+      
+      translateY.value = withTiming(maxTranslateY, {
+        duration: ANIMATION_DURATION,
+        easing: Easing.out(Easing.quad),
       });
-    }, []);
+    };
 
-    const close = useCallback(() => {
+    const close = () => {
       'worklet';
       active.value = false;
       translateY.value = withTiming(0, {
-        duration: 250,
-        easing: Easing.out(Easing.cubic),
+        duration: CLOSE_ANIMATION_DURATION,
+        easing: Easing.out(Easing.quad),
       });
-    }, []);
+    };
 
-    const isActive = useCallback(() => {
-      return active.value;
-    }, []);
+    const isActive = () => active.value;
 
-    useImperativeHandle(ref, () => ({ open, close, isActive }), [open, close, isActive]);
+    // Imperative handle
+    useImperativeHandle(ref, () => ({ open, close, isActive }), []);
 
+    // Visibility effect
     useEffect(() => {
       if (isVisible) {
         open();
       } else {
         close();
       }
-    }, [isVisible, open, close]);
+    }, [isVisible]);
 
-    const handleClose = useCallback(() => {
-      onClose();
-    }, [onClose]);
-
+    // Gesture handlers
     const panGesture = Gesture.Pan()
       .onStart(() => {
         'worklet';
@@ -108,33 +144,58 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
       })
       .onUpdate((event) => {
         'worklet';
+        const currentHeight = isLandscape.value
+          ? screenHeight.value * SHEET_HEIGHT_LANDSCAPE
+          : screenHeight.value * SHEET_HEIGHT_PORTRAIT;
+        const maxTranslateY = -currentHeight;
+        
         translateY.value = event.translationY + context.value.y;
-        translateY.value = Math.max(translateY.value, MAX_TRANSLATE_Y);
+        translateY.value = Math.max(translateY.value, maxTranslateY);
         translateY.value = Math.min(translateY.value, 50);
       })
       .onEnd((event) => {
         'worklet';
+        const currentHeight = isLandscape.value
+          ? screenHeight.value * SHEET_HEIGHT_LANDSCAPE
+          : screenHeight.value * SHEET_HEIGHT_PORTRAIT;
+        const maxTranslateY = -currentHeight;
+        
         const velocityY = event.velocityY;
-        const shouldClose = translateY.value > -BOTTOM_SHEET_HEIGHT / 2 || velocityY > 500;
+        const shouldClose = translateY.value > -currentHeight / 2 || velocityY > 500;
         
         if (shouldClose) {
           translateY.value = withTiming(0, {
-            duration: 250,
-            easing: Easing.out(Easing.cubic),
+            duration: CLOSE_ANIMATION_DURATION,
+            easing: Easing.out(Easing.quad),
           });
-          runOnJS(handleClose)();
+          runOnJS(onClose)();
         } else {
-          translateY.value = withTiming(MAX_TRANSLATE_Y, {
-            duration: 300,
-            easing: Easing.out(Easing.back(1.2)),
+          translateY.value = withTiming(maxTranslateY, {
+            duration: ANIMATION_DURATION,
+            easing: Easing.out(Easing.quad),
           });
         }
       });
 
+    const tapGesture = Gesture.Tap().onStart(() => {
+      'worklet';
+      translateY.value = withTiming(0, {
+        duration: CLOSE_ANIMATION_DURATION,
+        easing: Easing.out(Easing.quad),
+      });
+      runOnJS(onClose)();
+    });
+
+    // Animated styles
     const rBottomSheetStyle = useAnimatedStyle(() => {
+      const currentHeight = isLandscape.value
+        ? screenHeight.value * SHEET_HEIGHT_LANDSCAPE
+        : screenHeight.value * SHEET_HEIGHT_PORTRAIT;
+      const maxTranslateY = -currentHeight;
+      
       const borderRadius = interpolate(
         translateY.value,
-        [MAX_TRANSLATE_Y + 50, MAX_TRANSLATE_Y],
+        [maxTranslateY + 50, maxTranslateY],
         [25, 25],
         Extrapolate.CLAMP
       );
@@ -148,47 +209,38 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
     const rBackdropStyle = useAnimatedStyle(() => {
       return {
         opacity: withTiming(isVisible ? 1 : 0, {
-          duration: 250,
+          duration: CLOSE_ANIMATION_DURATION,
           easing: Easing.out(Easing.quad),
         }),
       };
     }, [isVisible]);
 
-    const tapGesture = Gesture.Tap().onStart(() => {
-      'worklet';
-      translateY.value = withTiming(0, {
-        duration: 250,
-        easing: Easing.out(Easing.cubic),
-      });
-      runOnJS(handleClose)();
-    });
+    // Memoized container style
+    const containerStyle = useMemo((): ViewStyle => ({
+      height: sheetConfig.height,
+      top: screenData.height,
+      paddingBottom: bottom,
+      width: (screenData.isLandscape ? '50%' : '95%') as any,
+      alignSelf: 'center',
+      maxWidth: screenData.isLandscape ? 600 : undefined,
+      zIndex: sheetConfig.zIndex,
+      elevation: sheetConfig.zIndex,
+    }), [sheetConfig, screenData, bottom]);
+
+    const backdropStyle = useMemo((): ViewStyle => ({
+      zIndex: sheetConfig.zIndex,
+      elevation: sheetConfig.zIndex,
+    }), [sheetConfig.zIndex]);
 
     return (
       <>
-        {/* Backdrop */}
         <GestureDetector gesture={tapGesture}>
-          <Animated.View style={[styles.backdrop, rBackdropStyle]} />
+          <Animated.View style={[styles.backdrop, backdropStyle, rBackdropStyle]} />
         </GestureDetector>
 
-        {/* Bottom Sheet */}
         <GestureDetector gesture={panGesture}>
-          <Animated.View style={[
-            styles.bottomSheetContainer, 
-            {
-              height: BOTTOM_SHEET_HEIGHT,
-              top: screenData.height,
-              paddingBottom: bottom,
-              width: screenData.isLandscape ? '50%' : '95%',
-              alignSelf: 'center',
-              maxWidth: screenData.isLandscape ? 600 : undefined,
-            },
-            rBottomSheetStyle
-          ]}>
+          <Animated.View style={[styles.bottomSheetContainer, containerStyle, rBottomSheetStyle]}>
             <View style={styles.line} />
-            
-           
-
-            {/* Content */}
             <View style={[styles.content, screenData.isLandscape && styles.contentLandscape]}>
               {children}
             </View>
@@ -199,27 +251,29 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
   }
 );
 
-const VideoOptionsContent: React.FC = () => {
+// Memoized VideoOptionsContent
+const VideoOptionsContent: React.FC = React.memo(() => {
   const [screenData, setScreenData] = useState(getScreenDimensions);
 
   useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+    const handleDimensionChange = ({ window }: { window: { width: number; height: number } }) => {
       setScreenData({
         width: window.width,
         height: window.height,
         isLandscape: window.width > window.height,
       });
-    });
+    };
 
+    const subscription = Dimensions.addEventListener('change', handleDimensionChange);
     return () => subscription?.remove();
   }, []);
 
-  const options = [
+  const options = useMemo(() => [
     { id: 'playback-speed', title: 'Playback Speed', icon: 'speedometer-outline' },
     { id: 'quality', title: 'Video Quality', icon: 'settings-outline' },
     { id: 'subtitles', title: 'Subtitles', icon: 'chatbox-ellipses-outline' },
     { id: 'audio', title: 'Audio Track', icon: 'volume-high-outline' },
-  ];
+  ], []);
 
   return (
     <View style={[styles.optionsContainer, screenData.isLandscape && styles.optionsContainerLandscape]}>
@@ -232,7 +286,7 @@ const VideoOptionsContent: React.FC = () => {
       ))}
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   backdrop: {
@@ -252,24 +306,6 @@ const styles = StyleSheet.create({
     marginTop: 15,
     marginBottom: 5,
     borderRadius: 2,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  headerLandscape: {
-    paddingBottom: 15,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  closeButton: {
-    padding: 8,
   },
   content: {
     flex: 1,

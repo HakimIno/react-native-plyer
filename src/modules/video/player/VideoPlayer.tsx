@@ -1,16 +1,26 @@
 import React, { useState, useRef } from 'react';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   useVideoControls, 
   useVideoDimensions, 
-  useVideoOrientation 
+  useVideoOrientation,
+  OrientationPreset,
+  getOrientationConfig
 } from '../hooks';
-import { 
-  VideoContainer, 
-  VideoPlaceholder 
-} from '../components';
+import { VideoContainer, VideoPlaceholder } from '../components';
 import { useVideoPlayer } from '../hooks';
 import { BottomSheet, VideoOptionsContent, BottomSheetRefProps } from '../components/ui';
+
+// Constants
+const DEFAULT_AUTO_HIDE_DELAY = 3000;
+const DEFAULT_PLAY_BUTTON_SIZE = 70;
+const DEFAULT_SEEK_BUTTON_SIZE = 50;
+const DEFAULT_SEEK_SECONDS = 10;
+const DEFAULT_OPTIONS_BUTTON_SIZE = 25;
+const DEFAULT_PLACEHOLDER_BUTTON_SIZE = 80;
+const DEFAULT_PLACEHOLDER_BUTTON_COLOR = "#666";
+const DEFAULT_PLACEHOLDER_BACKGROUND_COLOR = "#1a1a1a";
 
 interface VideoPlayerProps {
   style?: any;
@@ -24,12 +34,18 @@ interface VideoPlayerProps {
   showTimeLabels?: boolean;
   resizeMode?: 'contain' | 'cover' | 'stretch';
   
+  // Orientation props
+  orientationPreset?: OrientationPreset;
+  allowFreeRotation?: boolean;
+  enableSmartLocking?: boolean;
+  lockPortraitWhenNotFullscreen?: boolean;
+  
   // Placeholder props
   placeholderButtonSize?: number;
   placeholderButtonColor?: string;
   placeholderBackgroundColor?: string;
   
-  // Event callbacks (optional)
+  // Event callbacks
   onPlay?: () => void;
   onPause?: () => void;
   onSeek?: (time: number) => void;
@@ -40,16 +56,20 @@ interface VideoPlayerProps {
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   style,
-  autoHideControlsDelay = 3000,
-  playButtonSize = 70,
-  seekButtonSize = 50,
-  seekSeconds = 10,
-  optionsButtonSize = 25,
+  autoHideControlsDelay = DEFAULT_AUTO_HIDE_DELAY,
+  playButtonSize = DEFAULT_PLAY_BUTTON_SIZE,
+  seekButtonSize = DEFAULT_SEEK_BUTTON_SIZE,
+  seekSeconds = DEFAULT_SEEK_SECONDS,
+  optionsButtonSize = DEFAULT_OPTIONS_BUTTON_SIZE,
   showTimeLabels = true,
   resizeMode = 'contain',
-  placeholderButtonSize = 80,
-  placeholderButtonColor = "#666",
-  placeholderBackgroundColor = "#1a1a1a",
+  orientationPreset = 'AUTO',
+  allowFreeRotation,
+  enableSmartLocking,
+  lockPortraitWhenNotFullscreen,
+  placeholderButtonSize = DEFAULT_PLACEHOLDER_BUTTON_SIZE,
+  placeholderButtonColor = DEFAULT_PLACEHOLDER_BUTTON_COLOR,
+  placeholderBackgroundColor = DEFAULT_PLACEHOLDER_BACKGROUND_COLOR,
   onPlay,
   onPause,
   onSeek,
@@ -93,7 +113,19 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     autoHideDelay: autoHideControlsDelay,
   });
 
-  useVideoOrientation({ isFullscreen: videoState.isFullscreen });
+  // Orientation configuration
+  const orientationConfig = orientationPreset 
+    ? getOrientationConfig(orientationPreset) 
+    : {
+        allowFreeRotation: allowFreeRotation ?? true,
+        enableSmartLocking: enableSmartLocking ?? true,
+        lockPortraitWhenNotFullscreen: lockPortraitWhenNotFullscreen ?? false,
+      };
+
+  useVideoOrientation({ 
+    isFullscreen: videoState.isFullscreen,
+    ...orientationConfig,
+  });
 
   // Event handlers
   const handleVideoPress = () => {
@@ -107,7 +139,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     togglePlayPause();
     showControlsHandler();
     
-    // Callbacks
     if (wasPlaying) {
       onPause?.();
     } else {
@@ -171,13 +202,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   // Render video player
   return (
-    <>
+    <View style={{ flex: 1 }}>
       <VideoContainer
-        // Video source and ref
         videoUrl={videoState.currentVideoUrl}
         setVideoRef={setVideoRef}
-        
-        // Video state
         isPlaying={videoState.isPlaying}
         isSeekingInProgress={videoState.isSeekingInProgress}
         isBuffering={videoState.isBuffering}
@@ -187,17 +215,11 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         isMuted={videoState.isMuted}
         playbackRate={videoState.playbackRate}
         isFullscreen={videoState.isFullscreen}
-        
-        // Screen info
         screenWidth={screenData.width}
         isLandscape={screenData.isLandscape}
         safeAreaTop={top}
-        
-        // Controls
         showControls={showControls}
         controlsOpacity={controlsOpacity}
-        
-        // Event handlers
         onVideoPress={handleVideoPress}
         onProgress={handleProgress}
         onLoad={handleVideoLoad}
@@ -211,12 +233,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onSeekTo={handleSeekTo}
         onFullscreenPress={handleFullscreenPress}
         onOptionsPress={handleOptionsPress}
-        
-        // Style props
         style={style}
         resizeMode={resizeMode}
-        
-        // Customization props
         playButtonSize={playButtonSize}
         seekButtonSize={seekButtonSize}
         seekSeconds={seekSeconds}
@@ -224,14 +242,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         showTimeLabels={showTimeLabels}
       />
 
-      {/* Bottom Sheet */}
       <BottomSheet
         ref={bottomSheetRef}
         isVisible={isBottomSheetVisible}
+        isFullscreen={videoState.isFullscreen}
         onClose={handleBottomSheetClose}
       >
         <VideoOptionsContent />
       </BottomSheet>
-    </>
+    </View>
   );
 }; 
