@@ -1,5 +1,5 @@
 import { useRef, useEffect } from 'react';
-import { useAppDispatch, useAppSelector } from '../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
   setPlaying,
   setCurrentTime,
@@ -16,8 +16,8 @@ import {
   removeFromPlaylist,
   setSeekingInProgress,
   resetVideoState,
-} from '../store/slices/videoSlice';
-import { VideoItem } from '../types';
+} from '../../../store/slices/videoSlice';
+import { VideoItem } from '../../../types';
 
 
 export const useVideoPlayer = () => {

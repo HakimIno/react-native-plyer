@@ -13,9 +13,9 @@ import {
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList, VideoItem } from '../../types';
-import { useVideoPlayer, useVideoPlaylist } from '../../hooks/useVideoPlayer';
-import { isValidVideoUrl } from '../../modules/utility/helpers/networkUtils';
-import { formatTime } from '../../modules/utility/helpers/timeUtils';
+import { useVideoPlayer, useVideoPlaylist } from '../../modules/video/hooks/useVideoPlayer';
+import { isValidVideoUrl } from '../../modules/video/utility/helpers/networkUtils';
+import { formatTime } from '../../modules/video/utility/helpers/timeUtils';
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 

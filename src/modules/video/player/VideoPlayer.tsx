@@ -1,27 +1,71 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Dimensions, TouchableWithoutFeedback, StatusBar, ActivityIndicator, Text } from 'react-native';
-import Video from 'react-native-video';
-import * as ScreenOrientation from 'expo-screen-orientation';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  runOnUI,
-  Easing
-} from 'react-native-reanimated';
-import { useVideoPlayer } from '../../../hooks/useVideoPlayer';
-import { PlayPauseButton } from '../../ui/components/PlayPauseButton';
-import { ProgressBar } from '../../ui/components/ProgressBar';
-import { SeekButtons } from '../../ui/components/SeekButtons';
-import OptionsButton from '../../ui/components/OptionsButoon';
-import BottomSheet, { VideoOptionsContent, BottomSheetRefProps } from '../../ui/components/BottomSheet';
+import React, { useState, useRef } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { 
+  useVideoControls, 
+  useVideoDimensions, 
+  useVideoOrientation 
+} from '../hooks';
+import { 
+  VideoContainer, 
+  VideoPlaceholder 
+} from '../components';
+import { useVideoPlayer } from '../hooks';
+import { BottomSheet, VideoOptionsContent, BottomSheetRefProps } from '../components/ui';
 
 interface VideoPlayerProps {
   style?: any;
+  
+  // Customization props
+  autoHideControlsDelay?: number;
+  playButtonSize?: number;
+  seekButtonSize?: number;
+  seekSeconds?: number;
+  optionsButtonSize?: number;
+  showTimeLabels?: boolean;
+  resizeMode?: 'contain' | 'cover' | 'stretch';
+  
+  // Placeholder props
+  placeholderButtonSize?: number;
+  placeholderButtonColor?: string;
+  placeholderBackgroundColor?: string;
+  
+  // Event callbacks (optional)
+  onPlay?: () => void;
+  onPause?: () => void;
+  onSeek?: (time: number) => void;
+  onFullscreenToggle?: (isFullscreen: boolean) => void;
+  onVideoLoad?: (data: any) => void;
+  onVideoEnd?: () => void;
 }
 
-export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
+export const VideoPlayer: React.FC<VideoPlayerProps> = ({
+  style,
+  autoHideControlsDelay = 3000,
+  playButtonSize = 70,
+  seekButtonSize = 50,
+  seekSeconds = 10,
+  optionsButtonSize = 25,
+  showTimeLabels = true,
+  resizeMode = 'contain',
+  placeholderButtonSize = 80,
+  placeholderButtonColor = "#666",
+  placeholderBackgroundColor = "#1a1a1a",
+  onPlay,
+  onPause,
+  onSeek,
+  onFullscreenToggle,
+  onVideoLoad,
+  onVideoEnd,
+}) => {
+  // State
+  const [isBottomSheetVisible, setIsBottomSheetVisible] = useState(false);
+  
+  // Refs
+  const bottomSheetRef = useRef<BottomSheetRefProps>(null);
+  
+  // Hooks
+  const { top } = useSafeAreaInsets();
+  const screenData = useVideoDimensions();
   const {
     videoState,
     setVideoRef,
@@ -38,106 +82,20 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
     seekForward,
   } = useVideoPlayer();
 
-  const { top } = useSafeAreaInsets()
-
-  const [showControls, setShowControls] = useState(true);
-  const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [isBottomSheetVisible, setIsBottomSheetVisible] = useState(false);
-  const [screenData, setScreenData] = useState(() => {
-    const screen = Dimensions.get('screen');
-    return {
-      width: screen.width,
-      height: screen.height,
-      isLandscape: screen.width > screen.height
-    };
+  const {
+    showControls,
+    controlsOpacity,
+    showControlsHandler,
+    toggleControls,
+  } = useVideoControls({
+    isPlaying: videoState.isPlaying,
+    isSeekingInProgress: videoState.isSeekingInProgress,
+    autoHideDelay: autoHideControlsDelay,
   });
 
-  const controlsOpacity = useSharedValue(1);
-  const bottomSheetRef = useRef<BottomSheetRefProps>(null);
+  useVideoOrientation({ isFullscreen: videoState.isFullscreen });
 
-  useEffect(() => {
-    const subscription = Dimensions.addEventListener('change', ({ screen }) => {
-      setScreenData({
-        width: screen.width,
-        height: screen.height,
-        isLandscape: screen.width > screen.height
-      });
-    });
-
-    return () => subscription?.remove();
-  }, []);
-
-  useEffect(() => {
-    if (showControls && videoState.isPlaying) {
-      const timeout = setTimeout(() => {
-        hideControls();
-      }, 3000);
-      setControlsTimeout(timeout);
-
-      return () => {
-        if (timeout) clearTimeout(timeout);
-      };
-    } else if (controlsTimeout) {
-      clearTimeout(controlsTimeout);
-      setControlsTimeout(null);
-    }
-  }, [showControls, videoState.isPlaying]);
-
-  useEffect(() => {
-    if (!videoState.isPlaying || videoState.isSeekingInProgress) {
-      showControlsHandler();
-    }
-  }, [videoState.isPlaying, videoState.isSeekingInProgress]);
-
-  useEffect(() => {
-    const handleOrientationChange = async () => {
-      if (videoState.isFullscreen) {
-        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.LANDSCAPE);
-      } else {
-        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
-        setTimeout(async () => {
-          await ScreenOrientation.unlockAsync();
-        }, 500);
-      }
-    };
-
-    handleOrientationChange();
-
-    return () => {
-      ScreenOrientation.unlockAsync();
-    };
-  }, [videoState.isFullscreen]);
-
-  const showControlsHandler = () => {
-    setShowControls(true);
-    controlsOpacity.value = withTiming(1, {
-      duration: 200,
-      easing: Easing.out(Easing.quad),
-    });
-  };
-
-  const hideControls = () => {
-    setShowControls(false);
-    controlsOpacity.value = withTiming(0, {
-      duration: 200,
-      easing: Easing.out(Easing.quad),
-    });
-  };
-
-  const toggleControls = () => {
-    if (showControls) {
-      hideControls();
-    } else {
-      showControlsHandler();
-    }
-  };
-
-  const controlsStyle = useAnimatedStyle(() => {
-    return {
-      opacity: controlsOpacity.get(),
-    };
-  });
-
+  // Event handlers
   const handleVideoPress = () => {
     if (videoState.currentVideoUrl) {
       toggleControls();
@@ -145,23 +103,39 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
   };
 
   const handlePlayPausePress = () => {
+    const wasPlaying = videoState.isPlaying;
     togglePlayPause();
     showControlsHandler();
+    
+    // Callbacks
+    if (wasPlaying) {
+      onPause?.();
+    } else {
+      onPlay?.();
+    }
   };
 
   const handleSeekBackward = () => {
-    seekBackward(10);
+    seekBackward(seekSeconds);
     showControlsHandler();
   };
 
   const handleSeekForward = () => {
-    seekForward(10);
+    seekForward(seekSeconds);
     showControlsHandler();
   };
 
+  const handleSeekTo = (time: number) => {
+    seek(time);
+    showControlsHandler();
+    onSeek?.(time);
+  };
+
   const handleFullscreenPress = () => {
+    const wasFullscreen = videoState.isFullscreen;
     toggleFullscreen();
     showControlsHandler();
+    onFullscreenToggle?.(!wasFullscreen);
   };
 
   const handleOptionsPress = () => {
@@ -173,132 +147,82 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
     setIsBottomSheetVisible(false);
   };
 
-  const containerStyle = [
-    styles.container,
-    videoState.isFullscreen && styles.fullscreenContainer,
-    style
-  ];
+  const handleVideoLoad = (data: any) => {
+    handleLoad(data);
+    onVideoLoad?.(data);
+  };
 
-  const bottomControlsStyle = [
-    styles.bottomControls,
-    screenData.isLandscape && styles.bottomControlsLandscape
-  ];
+  const handleVideoEnd = () => {
+    handleEnd();
+    onVideoEnd?.();
+  };
 
-  const topControlsStyle = [
-    styles.topControls, { top: top, right: 20 },
-    screenData.isLandscape && styles.topControlsLandscape
-  ];
-
+  // Render placeholder if no video
   if (!videoState.currentVideoUrl) {
     return (
-      <View style={containerStyle}>
-        <View style={styles.placeholder}>
-          <PlayPauseButton
-            isPlaying={false}
-            onPress={() => { }}
-            size={80}
-            color="#666"
-          />
-        </View>
-      </View>
+      <VideoPlaceholder
+        style={style}
+        buttonSize={placeholderButtonSize}
+        buttonColor={placeholderButtonColor}
+        backgroundColor={placeholderBackgroundColor}
+      />
     );
   }
 
+  // Render video player
   return (
-    <View style={containerStyle}>
-      <StatusBar hidden={videoState.isFullscreen} />
-
-      <TouchableWithoutFeedback onPress={handleVideoPress}>
-        <View style={styles.videoContainer}>
-          <Video
-            ref={setVideoRef}
-            source={{ uri: videoState.currentVideoUrl }}
-            style={styles.video}
-            onProgress={handleProgress}
-            onLoad={handleLoad}
-            onBuffer={handleBuffer}
-            onLoadStart={handleLoadStart}
-            onEnd={handleEnd}
-            onSeek={handleSeek}
-            paused={!videoState.isPlaying}
-            volume={videoState.isMuted ? 0 : videoState.volume}
-            rate={videoState.playbackRate}
-            resizeMode="contain"
-            fullscreenAutorotate={true}
-            fullscreenOrientation='all'
-            controls={false}
-            repeat={false}
-            ignoreSilentSwitch="ignore"
-            mixWithOthers="duck"
-            playWhenInactive={false}
-            playInBackground={false}
-            progressUpdateInterval={100}
-          />
-
-          {/* Controls Overlay */}
-          <Animated.View style={[styles.controlsOverlay, controlsStyle]} pointerEvents={showControls ? 'auto' : 'none'}>
-            {/* Center Controls - Seek Backward | Play/Pause | Seek Forward */}
-            <View style={styles.centerControls}>
-              <View style={[styles.playbackControls, { top: 25 }]}>
-                {(videoState.isSeekingInProgress || videoState.isBuffering) ? (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#fff" />
-                  </View>
-                ) : (
-                  <View style={[styles.playPauseContainer, { gap: 40 }]}>
-                    <SeekButtons
-                      onSeekBackward={handleSeekBackward}
-                      onSeekForward={handleSeekForward}
-                      size={50}
-                      seekSeconds={10}
-                      type="backward"
-                    />
-                    <PlayPauseButton
-                      isPlaying={videoState.isPlaying}
-                      onPress={handlePlayPausePress}
-                      size={70}
-                    />
-                    <SeekButtons
-                      onSeekBackward={handleSeekBackward}
-                      onSeekForward={handleSeekForward}
-                      size={50}
-                      seekSeconds={10}
-                      type="forward"
-                    />
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Top Controls */}
-            <View style={topControlsStyle}>
-              <OptionsButton
-                isOptions={true}
-                onPress={handleOptionsPress}
-                size={25}
-                color="#fff"
-              />
-            </View>
-
-            {/* Bottom Controls */}
-            <View style={bottomControlsStyle}>
-              <ProgressBar
-                currentTime={videoState.currentTime}
-                duration={videoState.duration}
-                onSeek={seek}
-                isSeekingInProgress={videoState.isSeekingInProgress}
-                showTimeLabels={true}
-                screenWidth={screenData.width}
-                isFullscreen={videoState.isFullscreen}
-                handleFullscreenPress={handleFullscreenPress}
-              />
-            </View>
-
-            {/* Gradient Overlays for better text readability */}
-            <View style={styles.bottomGradient} />
-          </Animated.View>
-        </View>
-      </TouchableWithoutFeedback>
+    <>
+      <VideoContainer
+        // Video source and ref
+        videoUrl={videoState.currentVideoUrl}
+        setVideoRef={setVideoRef}
+        
+        // Video state
+        isPlaying={videoState.isPlaying}
+        isSeekingInProgress={videoState.isSeekingInProgress}
+        isBuffering={videoState.isBuffering}
+        currentTime={videoState.currentTime}
+        duration={videoState.duration}
+        volume={videoState.volume}
+        isMuted={videoState.isMuted}
+        playbackRate={videoState.playbackRate}
+        isFullscreen={videoState.isFullscreen}
+        
+        // Screen info
+        screenWidth={screenData.width}
+        isLandscape={screenData.isLandscape}
+        safeAreaTop={top}
+        
+        // Controls
+        showControls={showControls}
+        controlsOpacity={controlsOpacity}
+        
+        // Event handlers
+        onVideoPress={handleVideoPress}
+        onProgress={handleProgress}
+        onLoad={handleVideoLoad}
+        onBuffer={handleBuffer}
+        onLoadStart={handleLoadStart}
+        onEnd={handleVideoEnd}
+        onSeek={handleSeek}
+        onPlayPause={handlePlayPausePress}
+        onSeekBackward={handleSeekBackward}
+        onSeekForward={handleSeekForward}
+        onSeekTo={handleSeekTo}
+        onFullscreenPress={handleFullscreenPress}
+        onOptionsPress={handleOptionsPress}
+        
+        // Style props
+        style={style}
+        resizeMode={resizeMode}
+        
+        // Customization props
+        playButtonSize={playButtonSize}
+        seekButtonSize={seekButtonSize}
+        seekSeconds={seekSeconds}
+        optionsButtonSize={optionsButtonSize}
+        showTimeLabels={showTimeLabels}
+      />
 
       {/* Bottom Sheet */}
       <BottomSheet
@@ -308,110 +232,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
       >
         <VideoOptionsContent />
       </BottomSheet>
-    </View>
+    </>
   );
-};
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  fullscreenContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
-  },
-  videoContainer: {
-    flex: 1,
-    position: 'relative',
-  },
-  video: {
-    width: '100%',
-    height: '100%',
-  },
-  placeholder: {
-    flex: 1,
-    backgroundColor: '#1a1a1a',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  controlsOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'space-between',
-  },
-  centerControls: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  playbackControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  playPauseContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-
-  },
-  bottomControls: {
-    paddingBottom: 20,
-  },
-  bottomControlsLandscape: {
-    paddingBottom: 10,
-  },
-  bottomRightControls: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  bottomRightControlsLandscape: {
-    bottom: 10,
-    right: 10,
-  },
-  topControls: {
-    position: 'absolute',
-  },
-  topControlsLandscape: {
-    top: 10,
-  },
-  loadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  loadingText: {
-    color: '#fff',
-    fontSize: 14,
-    marginTop: 10,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-
-  bottomGradient: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: "100%",
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    pointerEvents: 'none',
-  },
-}); 
+}; 

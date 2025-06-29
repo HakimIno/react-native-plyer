@@ -16,7 +16,6 @@ interface PlayPauseButtonProps {
   size?: number;
   color?: string;
   backgroundColor?: string;
-  borderColor?: string;
 }
 
 export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
@@ -25,7 +24,6 @@ export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
   size = 60, 
   color = '#fff',
   backgroundColor = 'rgba(0, 0, 0, 0.3)', 
-  borderColor = 'rgba(255, 255, 255, 0.2)',
 }) => {
   const scale = useSharedValue(1);
 

@@ -37,7 +37,7 @@ export interface BottomSheetRefProps {
   open: () => void;
 }
 
-const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
+export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
   ({ isVisible, onClose, children }, ref) => {
     const { bottom } = useSafeAreaInsets();
     const translateY = useSharedValue(0);
@@ -302,5 +302,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default BottomSheet;
 export { VideoOptionsContent }; 

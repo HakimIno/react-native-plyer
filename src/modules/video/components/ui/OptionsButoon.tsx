@@ -11,7 +11,7 @@ interface OptionsButtonProps {
     color?: string;
 }
 
-const OptionsButton: React.FC<OptionsButtonProps> = ({ size, color, onPress, isOptions }) => {
+export const OptionsButton: React.FC<OptionsButtonProps> = ({ size, color, onPress, isOptions }) => {
 
     const scale = useSharedValue(1);
 
@@ -55,5 +55,3 @@ const styles = StyleSheet.create({
         borderRadius: 100,
     },
 });
-
-export default OptionsButton;   
