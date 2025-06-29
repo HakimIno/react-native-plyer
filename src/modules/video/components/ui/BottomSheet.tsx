@@ -259,6 +259,9 @@ const VideoOptionsContent: React.FC = () => {
   const [screenData, setScreenData] = useState(getScreenDimensions);
   const [currentView, setCurrentView] = useState<'main' | 'playback-speed'>('main');
   const selectedSpeed = useSelector((state: RootState) => state.video.playbackRate);
+  
+  // Animation for slide transition
+  const slideX = useSharedValue(0);
 
   useEffect(() => {
     const handleDimensionChange = ({ window }: { window: { width: number; height: number } }) => {
@@ -281,6 +284,23 @@ const VideoOptionsContent: React.FC = () => {
     const subscription = Dimensions.addEventListener('change', handleDimensionChange);
     return () => subscription?.remove();
   }, []);
+
+  // Animate slide transition when currentView changes
+  useEffect(() => {
+    if (currentView === 'playback-speed') {
+      // Slide to show playback speed view (slide main view to left, bring speed view from right)
+      slideX.value = withTiming(-screenData.width, {
+        duration: 300,
+        easing: Easing.out(Easing.quad),
+      });
+    } else {
+      // Slide back to main view (slide speed view to right, bring main view from left)
+      slideX.value = withTiming(0, {
+        duration: 300,
+        easing: Easing.out(Easing.quad),
+      });
+    }
+  }, [currentView, screenData.width]);
 
   const mainOptions = useMemo(() => [
     { id: 'playback-speed', title: 'Playback Speed', icon: 'speedometer-outline' as const },
@@ -312,31 +332,48 @@ const VideoOptionsContent: React.FC = () => {
     setCurrentView('main');
   }, []);
 
-  if (currentView === 'playback-speed') {
-    return (
-      <PlaybackSpeedSelector
-        onBackPress={handleBackPress}
-        isLandscape={screenData.isLandscape}
-      />
-    );
-  }
+  // Animated styles for both views
+  const mainViewStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: slideX.value }],
+    };
+  });
+
+  const speedViewStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: slideX.value + screenData.width }],
+    };
+  });
 
   return (
     <View style={[styles.optionsContainer, screenData.isLandscape && styles.optionsContainerLandscape]}>
-      {mainOptions.map((option) => (
-        <TouchableOpacity 
-          key={option.id} 
-          style={[styles.optionItem, screenData.isLandscape && styles.optionItemLandscape]}
-          onPress={() => handleMainOptionPress(option.id)}
-        >
-          <Ionicons name={option.icon as any} size={20} color="#fff" />
-          <Text style={styles.optionText}>{option.title}</Text>
-          {option.id === 'playback-speed' && (
-            <Text style={styles.currentValueText}>{selectedSpeed}x</Text>
-          )}
-          <Ionicons name="chevron-forward" size={20} color="#fff" />
-        </TouchableOpacity>
-      ))}
+      <View style={styles.slideContainer}>
+        {/* Main Options View */}
+        <Animated.View style={[styles.slideView, mainViewStyle]}>
+          {mainOptions.map((option) => (
+            <TouchableOpacity 
+              key={option.id} 
+              style={[styles.optionItem, screenData.isLandscape && styles.optionItemLandscape]}
+              onPress={() => handleMainOptionPress(option.id)}
+            >
+              <Ionicons name={option.icon as any} size={20} color="#fff" />
+              <Text style={styles.optionText}>{option.title}</Text>
+              {option.id === 'playback-speed' && (
+                <Text style={styles.currentValueText}>{selectedSpeed}x</Text>
+              )}
+              <Ionicons name="chevron-forward" size={20} color="#fff" />
+            </TouchableOpacity>
+          ))}
+        </Animated.View>
+
+        {/* Playback Speed View */}
+        <Animated.View style={[styles.slideView, speedViewStyle]}>
+          <PlaybackSpeedSelector
+            onBackPress={handleBackPress}
+            isLandscape={screenData.isLandscape}
+          />
+        </Animated.View>
+      </View>
     </View>
   );
 };
@@ -347,7 +384,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.4)',
   },
   bottomSheetContainer: {
-    backgroundColor: 'rgba(20, 20, 20, 1)',
+    backgroundColor: 'rgba(10, 10, 10, 1)',
     position: 'absolute',
     borderRadius: 15,
   },
@@ -393,6 +430,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#888',
     marginRight: 8,
+  },
+  slideContainer: {
+    flex: 1,
+    position: 'relative',
+    overflow: 'hidden',
+    minHeight: 200,
+  },
+  slideView: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
   },
 });
 

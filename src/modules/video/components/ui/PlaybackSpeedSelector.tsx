@@ -31,7 +31,6 @@ const PlaybackSpeedSelector: React.FC<PlaybackSpeedSelectorProps> = ({
 
   const handleSpeedSelection = (speed: number) => {
     dispatch(setPlaybackRate(speed));
-    console.log('Selected playback speed:', speed);
   };
 
   return (
@@ -72,10 +71,10 @@ const PlaybackSpeedSelector: React.FC<PlaybackSpeedSelectorProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 20,
+    
   },
   containerLandscape: {
-    paddingHorizontal: 20,
+
   },
   backButton: {
     flexDirection: 'row',
