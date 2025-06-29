@@ -27,6 +27,7 @@ const AppNavigator: React.FC = () => {
           component={HomeScreen}
           options={{
             title: 'Video Player',
+            headerShown: false,
           }}
         />
         <Stack.Screen 
