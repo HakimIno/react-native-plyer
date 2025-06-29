@@ -50,11 +50,13 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const [previewTimeValue, setPreviewTimeValue] = useState(0);
   const [userSeekTime, setUserSeekTime] = useState<number | null>(null);
   const [displayTime, setDisplayTime] = useState(currentTime);
+  const [hasActuallyDragged, setHasActuallyDragged] = useState(false);
 
   const currentScreenWidth = screenWidth || Dimensions.get('screen').width;
   const progressWidth = currentScreenWidth - 40; // 20px padding on each side
   const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const previewTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const barResetTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const progress = useSharedValue(0);
   const thumbScale = useSharedValue(1);
@@ -96,6 +98,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       }
       if (previewTimeoutRef.current) {
         clearTimeout(previewTimeoutRef.current);
+      }
+      if (barResetTimeoutRef.current) {
+        clearTimeout(barResetTimeoutRef.current);
       }
     };
   }, []);
@@ -145,26 +150,45 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     setPreviewTimeValue(time);
   };
 
+  const resetBarToNormal = () => {
+    thumbScale.value = withSpring(1, { damping: 15, stiffness: 200 });
+    barHeight.value = withSpring(2.5, { damping: 15, stiffness: 200 });
+  };
+
+  const setBarToActive = () => {
+    if (barResetTimeoutRef.current) {
+      clearTimeout(barResetTimeoutRef.current);
+    }
+    
+    thumbScale.value = withSpring(1.3, { damping: 15, stiffness: 200 });
+    barHeight.value = withSpring(6, { damping: 15, stiffness: 200 });
+    
+    // Auto-reset after 2 seconds if no onEnd is called
+    barResetTimeoutRef.current = setTimeout(() => {
+      resetBarToNormal();
+    }, 2000);
+  };
+
   const panGesture = Gesture.Pan()
-    .hitSlop({ top: 20, bottom: 20, left: 10, right: 10 })
-    .minDistance(5) // Add minimum distance to distinguish from tap
+    .hitSlop({ top: 10, bottom: 10, left: 5, right: 5 })
+    .minDistance(3)
+    .shouldCancelWhenOutside(false)
     .onBegin((event) => {
       runOnJS(setDragging)(true);
       runOnJS(setSeekingPreview)(true);
-      thumbScale.value = withSpring(1.3, { damping: 15, stiffness: 200 });
-      barHeight.value = withSpring(6, { damping: 15, stiffness: 200 });
+      runOnJS(setBarToActive)();
+      runOnJS(setHasActuallyDragged)(false);
       
-      // Set initial position based on touch location
-      const clampedX = Math.max(0, Math.min(progressWidth, event.x));
-      progress.value = clampedX;
-      
+      // Don't set progress position in onBegin - wait for actual dragging
       if (duration > 0) {
-        const seekTime = (clampedX / progressWidth) * duration;
+        const seekTime = (Math.max(0, Math.min(progressWidth, event.x)) / progressWidth) * duration;
         runOnJS(updatePreviewTime)(seekTime);
         runOnJS(setDisplayTime)(seekTime);
       }
     })
     .onUpdate((event) => {
+      runOnJS(setHasActuallyDragged)(true);
+      
       const clampedX = Math.max(0, Math.min(progressWidth, event.x));
       progress.value = clampedX;
 
@@ -175,37 +199,38 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       }
     })
     .onEnd(() => {
-      const finalProgress = progress.value;
+      if (barResetTimeoutRef.current) {
+        clearTimeout(barResetTimeoutRef.current);
+        barResetTimeoutRef.current = null;
+      }
 
       runOnJS(setDragging)(false);
       runOnJS(setSeekingPreview)(false);
-      thumbScale.value = withSpring(1, { damping: 15, stiffness: 200 });
-      barHeight.value = withSpring(2, { damping: 15, stiffness: 200 });
+      runOnJS(resetBarToNormal)();
 
-      if (duration > 0) {
+      // Only seek if user actually dragged
+      if (hasActuallyDragged && duration > 0) {
+        const finalProgress = progress.value;
         const seekTime = (finalProgress / progressWidth) * duration;
         runOnJS(handleSeek)(seekTime);
       }
-    });
-
-  const tapGesture = Gesture.Tap()
-    .hitSlop({ top: 20, bottom: 20, left: 10, right: 10 })
-    .maxDuration(250) // Quick tap only
-    .onEnd((event) => {
-      const clampedX = Math.max(0, Math.min(progressWidth, event.x));
-
-      progress.value = withSpring(clampedX, {
-        damping: 20,
-        stiffness: 300,
-      });
-
-      if (duration > 0) {
-        const seekTime = (clampedX / progressWidth) * duration;
-        runOnJS(handleSeek)(seekTime);
+      
+      runOnJS(setHasActuallyDragged)(false);
+    })
+    .onTouchesCancelled(() => {
+      if (barResetTimeoutRef.current) {
+        clearTimeout(barResetTimeoutRef.current);
+        barResetTimeoutRef.current = null;
       }
+      
+      runOnJS(setDragging)(false);
+      runOnJS(setSeekingPreview)(false);
+      runOnJS(resetBarToNormal)();
+      runOnJS(setHasActuallyDragged)(false);
     });
 
-  const composedGesture = Gesture.Race(panGesture, tapGesture);
+  // Only use pan gesture, no tap gesture
+  const composedGesture = panGesture;
 
   const progressBarStyle = useAnimatedStyle(() => {
     return {
@@ -265,7 +290,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         </Animated.View>
       )}
 
-      <View style={styles.progressContainer}>
+      <View style={styles.progressContainer} pointerEvents="box-only">
         <GestureDetector gesture={composedGesture}>
           <View style={[styles.progressTrack, { width: progressWidth }]}>
             {/* Invisible touch area */}
@@ -347,14 +372,13 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: 20,
-    paddingTop: 0,
-    paddingBottom: 0,
+    paddingVertical: 5,
   },
   progressTrack: {
     justifyContent: 'center',
     position: 'relative',
-    paddingBottom: 20,
-    height: 40,
+    paddingBottom: 0,
+    height: 30,
   },
   touchArea: {
     position: 'absolute',

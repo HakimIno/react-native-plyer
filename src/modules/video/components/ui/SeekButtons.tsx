@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, useCallback } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
@@ -29,13 +29,51 @@ export const SeekButtons: React.FC<SeekButtonsProps> = ({
 }) => {
     const backwardScale = useSharedValue(1);
     const forwardScale = useSharedValue(1);
+    
+    // Refs for debouncing rapid taps
+    const backwardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const forwardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const backwardCountRef = useRef(0);
+    const forwardCountRef = useRef(0);
+
+    const debouncedBackward = useCallback(() => {
+        if (backwardTimeoutRef.current) {
+            clearTimeout(backwardTimeoutRef.current);
+        }
+        
+        backwardCountRef.current += 1;
+        
+        backwardTimeoutRef.current = setTimeout(() => {
+            // Execute accumulated seeks
+            for (let i = 0; i < backwardCountRef.current; i++) {
+                onSeekBackward();
+            }
+            backwardCountRef.current = 0;
+        }, 300); // Wait 300ms after last tap
+    }, [onSeekBackward]);
+
+    const debouncedForward = useCallback(() => {
+        if (forwardTimeoutRef.current) {
+            clearTimeout(forwardTimeoutRef.current);
+        }
+        
+        forwardCountRef.current += 1;
+        
+        forwardTimeoutRef.current = setTimeout(() => {
+            // Execute accumulated seeks
+            for (let i = 0; i < forwardCountRef.current; i++) {
+                onSeekForward();
+            }
+            forwardCountRef.current = 0;
+        }, 300); // Wait 300ms after last tap
+    }, [onSeekForward]);
 
     const handleBackwardPress = () => {
         backwardScale.value = withSequence(
             withSpring(0.85, { duration: 80 }),
             withSpring(1, { duration: 80 })
         );
-        onSeekBackward();
+        debouncedBackward();
     };
 
     const handleForwardPress = () => {
@@ -43,7 +81,7 @@ export const SeekButtons: React.FC<SeekButtonsProps> = ({
             withSpring(0.85, { duration: 80 }),
             withSpring(1, { duration: 80 })
         );
-        onSeekForward();
+        debouncedForward();
     };
 
     const backwardAnimatedStyle = useAnimatedStyle(() => {
@@ -77,12 +115,13 @@ export const SeekButtons: React.FC<SeekButtonsProps> = ({
                     hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                 >
                     <View style={styles.iconContainer}>
-                        <Ionicons
+                        {/* <Ionicons
                             name="play-skip-back"
                             size={size * 0.4}
                             color={color}
                             style={styles.icon}
-                        />
+                        /> */}
+                        <MaterialIcons name="replay-10" size={size * 0.5} color={color} style={styles.icon} />
                     </View>
                 </AnimatedTouchableOpacity>
             ) : (
@@ -106,12 +145,13 @@ export const SeekButtons: React.FC<SeekButtonsProps> = ({
                     hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                 >
                     <View style={styles.iconContainer}>
-                        <Ionicons
+                        {/* <Ionicons
                             name="play-skip-forward"
                             size={size * 0.4}
                             color={color}
                             style={styles.icon}
-                        />
+                        /> */}
+                        <MaterialIcons name="forward-10" size={size * 0.5} color={color} style={styles.icon} />
                         {/* <Text style={[styles.secondsText, { color, fontSize: size * 0.2 }]}>
                             {seekSeconds}
                         </Text> */}
