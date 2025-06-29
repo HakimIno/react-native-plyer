@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Dimensions, TouchableWithoutFeedback, StatusBar, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableWithoutFeedback, StatusBar, ActivityIndicator, Text } from 'react-native';
 import Video from 'react-native-video';
 import * as ScreenOrientation from 'expo-screen-orientation';
 import Animated, {
@@ -240,27 +240,33 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ style }) => {
             {/* Center Controls - Seek Backward | Play/Pause | Seek Forward */}
             <View style={styles.centerControls}>
               <View style={[styles.playbackControls, { top: 25 }]}>
-                <View style={[styles.playPauseContainer, { gap: 40 }]}>
-                  <SeekButtons
-                    onSeekBackward={handleSeekBackward}
-                    onSeekForward={handleSeekForward}
-                    size={50}
-                    seekSeconds={10}
-                    type="backward"
-                  />
-                  <PlayPauseButton
-                    isPlaying={videoState.isPlaying}
-                    onPress={handlePlayPausePress}
-                    size={70}
-                  />
-                  <SeekButtons
-                    onSeekBackward={handleSeekBackward}
-                    onSeekForward={handleSeekForward}
-                    size={50}
-                    seekSeconds={10}
-                    type="forward"
-                  />
-                </View>
+                {(videoState.isSeekingInProgress || videoState.isBuffering) ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color="#fff" />
+                  </View>
+                ) : (
+                  <View style={[styles.playPauseContainer, { gap: 40 }]}>
+                    <SeekButtons
+                      onSeekBackward={handleSeekBackward}
+                      onSeekForward={handleSeekForward}
+                      size={50}
+                      seekSeconds={10}
+                      type="backward"
+                    />
+                    <PlayPauseButton
+                      isPlaying={videoState.isPlaying}
+                      onPress={handlePlayPausePress}
+                      size={70}
+                    />
+                    <SeekButtons
+                      onSeekBackward={handleSeekBackward}
+                      onSeekForward={handleSeekForward}
+                      size={50}
+                      seekSeconds={10}
+                      type="forward"
+                    />
+                  </View>
+                )}
               </View>
             </View>
 
@@ -390,6 +396,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  loadingText: {
+    color: '#fff',
+    fontSize: 14,
+    marginTop: 10,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 
   bottomGradient: {
