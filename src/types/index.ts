@@ -58,4 +58,5 @@ export interface VideoContextType {
 export type RootStackParamList = {
   Home: undefined;
   Player: undefined;
+  AddVideo: undefined;
 }; 

@@ -5,29 +5,18 @@ import {
   StyleSheet,
   FlatList,
   TouchableOpacity,
-  TextInput,
-  Alert,
   SafeAreaView,
   Image,
   StatusBar,
-  Platform, // Import Platform for OS-specific adjustments
-  LayoutAnimation, // For subtle animations
-  UIManager, // Required for LayoutAnimation on Android
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList, VideoItem } from '../../types';
 import { useVideoPlayer, useVideoPlaylist } from '../../modules/video/hooks/useVideoPlayer';
-import { isValidVideoUrl } from '../../modules/video/utility/helpers/networkUtils';
 import { formatTime } from '../../modules/video/utility/helpers/timeUtils';
 import { getCachedVideoThumbnail } from '../../modules/video/utility/helpers/thumbnailUtils';
 
-// Enable LayoutAnimation for Android
-if (Platform.OS === 'android') {
-  if (UIManager.setLayoutAnimationEnabledExperimental) {
-    UIManager.setLayoutAnimationEnabledExperimental(true);
-  }
-}
+
 
 type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -38,9 +27,6 @@ interface Props {
 const HomeScreen = ({ navigation }: Props) => {
   const { setCurrentVideo } = useVideoPlayer();
   const { videoList, addToPlaylist } = useVideoPlaylist();
-  const [newVideoUrl, setNewVideoUrl] = useState('');
-  const [newVideoTitle, setNewVideoTitle] = useState('');
-  const [showAddForm, setShowAddForm] = useState(false);
   const [thumbnailCache, setThumbnailCache] = useState<Map<string, string>>(new Map());
 
   // Sample video list for demonstration
@@ -50,14 +36,14 @@ const HomeScreen = ({ navigation }: Props) => {
       title: 'Sample Video 1 (Auto Thumbnail)',
       url: 'https://storage.googleapis.com/for_test_f/Kitten-cute.mp4',
       thumbnail: '', // No thumbnail - will auto-generate
-      duration: 30,
+      duration: 661,
       isLocal: false,
     },
     {
       id: '2',
       title: 'Big Buck Bunny - Sample Video',
       url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      thumbnail: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Big_buck_bunny_poster_big.jpg/320px-Big_buck_bunny_poster_big.jpg',
+      thumbnail: '',
       duration: 596,
       isLocal: false,
     },
@@ -66,15 +52,15 @@ const HomeScreen = ({ navigation }: Props) => {
       title: 'Sample Video 3 (Auto Thumbnail)',
       url: 'https://storage.googleapis.com/for_test_f/yung%20kai%20720.mp4',
       thumbnail: '', // No thumbnail - will auto-generate
-      duration: 100,
+      duration: 214,
       isLocal: false,
     },
     {
       id: '4',
       title: 'Sprite Fight',
       url: 'https://files.vidstack.io/sprite-fight/1080p.mp4',
-      thumbnail: 'https://files.vidstack.io/sprite-fight/poster.webp',
-      duration: 1000,
+      thumbnail: '',
+      duration: 629,
       isLocal: false,
     },
   ];
@@ -85,66 +71,9 @@ const HomeScreen = ({ navigation }: Props) => {
     }
   }, []);
 
-  // Animate form visibility
-  useEffect(() => {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
-  }, [showAddForm]);
 
-  const handleAddVideo = async () => {
-    if (!newVideoUrl.trim()) {
-      Alert.alert('Missing URL', 'Please enter a video URL to add.');
-      return;
-    }
 
-    if (!isValidVideoUrl(newVideoUrl)) {
-      Alert.alert('Invalid URL', 'The URL you entered is not valid. Please check and try again.');
-      return;
-    }
 
-    Alert.alert('Adding Video', 'Please wait while we add your video and generate a thumbnail...', [], { cancelable: false });
-
-    try {
-      const generatedThumbnail = await getCachedVideoThumbnail(
-        newVideoUrl.trim(),
-        undefined,
-        { time: 2000, quality: 0.7 }
-      );
-
-      const newVideo: VideoItem = {
-        id: Date.now().toString(),
-        title: newVideoTitle.trim() || 'Untitled Video',
-        url: newVideoUrl.trim(),
-        thumbnail: generatedThumbnail,
-        isLocal: false,
-      };
-
-      addToPlaylist(newVideo);
-      setNewVideoUrl('');
-      setNewVideoTitle('');
-      setShowAddForm(false);
-      Alert.alert('Success!', 'Video added to playlist with auto-generated thumbnail.');
-    } catch (error) {
-      console.log('Error adding video or generating thumbnail:', error);
-      
-      // Still add the video but with a fallback thumbnail
-      const newVideo: VideoItem = {
-        id: Date.now().toString(),
-        title: newVideoTitle.trim() || 'Untitled Video',
-        url: newVideoUrl.trim(),
-        thumbnail: 'https://via.placeholder.com/320x180?text=Video', // Fallback placeholder
-        isLocal: false,
-      };
-
-      addToPlaylist(newVideo);
-      setNewVideoUrl('');
-      setNewVideoTitle('');
-      setShowAddForm(false);
-      Alert.alert(
-        'Added with Caveat',
-        'Video added to playlist, but thumbnail generation failed. It should still play fine!'
-      );
-    }
-  };
 
   const handlePlayVideo = (video: VideoItem, index: number) => {
     setCurrentVideo(video, index);
@@ -207,15 +136,11 @@ const HomeScreen = ({ navigation }: Props) => {
               resizeMode="cover"
               onError={() => {
                 console.log('Failed to load thumbnail:', currentThumbnail);
-                // Optionally set a specific error placeholder for this item
               }}
             />
           ) : (
             <View style={styles.thumbnailPlaceholder}>
-              <Ionicons name="image-outline" size={48} color="#666" />
-              <Text style={styles.thumbnailPlaceholderText}>
-                {isGeneratingThumbnail ? 'Generating Thumbnail...' : 'No Thumbnail'}
-              </Text>
+              <Ionicons name="image-outline" size={100} color="#666" />
             </View>
           )}
 
@@ -258,43 +183,17 @@ const HomeScreen = ({ navigation }: Props) => {
         <Text style={styles.headerTitle}>Video Player</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => setShowAddForm(!showAddForm)}
+          onPress={() => navigation.navigate('AddVideo')}
         >
           <Ionicons
-            name={showAddForm ? "close" : "add"}
+            name="add"
             size={24}
             color="#fff"
           />
         </TouchableOpacity>
       </View>
 
-      {/* Add Video Form */}
-      {showAddForm && (
-        <View style={styles.addVideoForm}>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter video URL (e.g., https://example.com/video.mp4)"
-            placeholderTextColor="#999"
-            value={newVideoUrl}
-            onChangeText={setNewVideoUrl}
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-            returnKeyType="done"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Video title (optional)"
-            placeholderTextColor="#999"
-            value={newVideoTitle}
-            onChangeText={setNewVideoTitle}
-            returnKeyType="done"
-          />
-          <TouchableOpacity style={styles.submitButton} onPress={handleAddVideo}>
-            <Text style={styles.submitButtonText}>Add Video to Playlist</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+
 
       {/* Video List */}
       <View style={styles.playlistSection}>
@@ -336,17 +235,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 18, // Increased padding
     paddingVertical: 12, // Increased vertical padding
-    backgroundColor: 'rgba(18, 18, 18, 0.95)',
-    borderBottomWidth: StyleSheet.hairlineWidth, // Thinner border
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    ...Platform.select({
-      ios: {
-        paddingTop: 0, // SafeAreaView handles this
-      },
-      android: {
-        paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 10,
-      },
-    }),
+   
   },
   headerTitle: {
     fontSize: 22, // Larger title
@@ -358,65 +247,23 @@ const styles = StyleSheet.create({
     width: 44, // Slightly larger touch target
     height: 44,
     borderRadius: 22, // Perfect circle
-    backgroundColor: '#667eea',
+    backgroundColor: '#007AFF',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#667eea',
+    shadowColor: '#007AFF',
     shadowOffset: { width: 0, height: 6 }, // Softer shadow
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 6,
   },
-  addVideoForm: {
-    backgroundColor: 'rgba(20, 20, 20, 0.98)',
-    padding: 24,
-    marginHorizontal: 16,
-    marginBottom: 16, // Add some bottom margin
-    borderRadius: 16, // Slightly more rounded
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2, // Softer shadow
-    shadowRadius: 12,
-    elevation: 6,
-    borderWidth: StyleSheet.hairlineWidth, // Thinner border
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  input: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.15)', // Slightly more visible border
-    borderRadius: 12, // Softer input corners
-    padding: 16, // Reduced padding for better fit
-    marginBottom: 14, // Reduced margin
-    fontSize: 16,
-    color: '#ffffff',
-    backgroundColor: 'rgba(40, 40, 40, 0.6)',
-    fontWeight: '500',
-    // Removed redundant shadow from input for cleaner look
-  },
-  submitButton: {
-    backgroundColor: '#667eea',
-    padding: 16, // Reduced padding
-    borderRadius: 12, // Match input radius
-    alignItems: 'center',
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 4 }, // Softer shadow
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  submitButtonText: {
-    color: '#ffffff',
-    fontSize: 17, // Slightly smaller text
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
+
   playlistSection: {
     flex: 1,
-    paddingHorizontal: 18, // Increased padding
-    paddingTop: 15, // Increased padding
+    paddingHorizontal: 15, // Increased padding
+    paddingTop: 10, // Increased padding
   },
   sectionTitle: {
-    fontSize: 20, // Larger section title
+    fontSize: 16, // Larger section title
     fontWeight: '700', // Bolder
     marginBottom: 15, // More space
     color: '#ffffff',
@@ -426,23 +273,15 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   videoCard: {
-    backgroundColor: 'rgba(25, 25, 25, 0.7)', // Slightly more opaque
-    borderRadius: 16, // More rounded corners
+    backgroundColor: 'rgba(20, 20, 20, 1)', // Slightly more opaque
+    borderRadius: 10, // More rounded corners
     marginBottom: 20,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
-    borderWidth: StyleSheet.hairlineWidth, // Subtle border
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    transform: [{ scale: 1 }],
+   
   },
   thumbnailContainer: {
     position: 'relative',
     aspectRatio: 16 / 9,
-    backgroundColor: 'rgba(40, 40, 40, 0.8)',
     justifyContent: 'center', // Center content when image is not loaded
     alignItems: 'center',
   },
@@ -470,7 +309,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.8)', // Slightly less opaque
     paddingHorizontal: 8, // Slightly less padding
     paddingVertical: 4, // Slightly less padding
-    borderRadius: 8, // Softer corners
+    borderRadius:8, // Softer corners
   },
   durationText: {
     color: '#ffffff',
@@ -487,7 +326,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.3)', // Slightly more visible overlay
-    borderRadius: 16, // Match card radius
+    borderRadius: 10, // Match card radius
   },
   videoInfo: {
     padding: 16, // Consistent padding
