@@ -1,6 +1,4 @@
-/**
- * Format seconds to MM:SS or HH:MM:SS format
- */
+
 export const formatTime = (seconds: number): string => {
   if (isNaN(seconds) || seconds < 0) return '00:00';
   
@@ -19,9 +17,6 @@ export const formatTime = (seconds: number): string => {
     .padStart(2, '0')}`;
 };
 
-/**
- * Parse time string (MM:SS or HH:MM:SS) to seconds
- */
 export const parseTimeToSeconds = (timeString: string): number => {
   const parts = timeString.split(':').map(Number);
   
@@ -38,24 +33,17 @@ export const parseTimeToSeconds = (timeString: string): number => {
   return 0;
 };
 
-/**
- * Calculate progress percentage
- */
 export const calculateProgress = (currentTime: number, duration: number): number => {
   if (duration === 0) return 0;
   return Math.min((currentTime / duration) * 100, 100);
 };
 
-/**
- * Calculate time from progress percentage
- */
+
 export const calculateTimeFromProgress = (progress: number, duration: number): number => {
   return (progress / 100) * duration;
 };
 
-/**
- * Check if time is valid
- */
+  
 export const isValidTime = (time: number): boolean => {
   return typeof time === 'number' && !isNaN(time) && time >= 0;
 }; 
