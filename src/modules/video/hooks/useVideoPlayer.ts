@@ -176,8 +176,6 @@ export const useVideoPlayer = () => {
       dispatch(setDuration(data.duration));
     }
     
-    console.log('Video loaded with text tracks:', data.textTracks || 'none');
-    
     dispatch(setBuffering(false));
     dispatch(setSeekingInProgress(false));
     isUserSeeking.current = false;
@@ -215,7 +213,6 @@ export const useVideoPlayer = () => {
   };
 
   const handleTextTracks = (data: { textTracks: any[] }) => {
-    console.log('Text tracks changed:', data.textTracks);
   };
 
   return {

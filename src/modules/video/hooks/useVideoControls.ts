@@ -16,7 +16,6 @@ export const useVideoControls = ({
   const [controlsTimeout, setControlsTimeout] = useState<NodeJS.Timeout | null>(null);
   const controlsOpacity = useSharedValue(1);
 
-  // Auto-hide controls when playing
   useEffect(() => {
     if (showControls && isPlaying) {
       const timeout = setTimeout(() => {
@@ -33,7 +32,6 @@ export const useVideoControls = ({
     }
   }, [showControls, isPlaying, autoHideDelay]);
 
-  // Show controls when not playing or seeking
   useEffect(() => {
     if (!isPlaying || isSeekingInProgress) {
       showControlsHandler();

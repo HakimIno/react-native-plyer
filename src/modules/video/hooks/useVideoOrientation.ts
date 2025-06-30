@@ -1,11 +1,9 @@
 import { useEffect, useRef } from 'react';
 import * as ScreenOrientation from 'expo-screen-orientation';
 
-// Constants
 const UNLOCK_DELAY = 800;
 const FORCE_CHANGE_DELAY = 100;
 
-// Types
 interface UseVideoOrientationProps {
   isFullscreen: boolean;
   allowFreeRotation?: boolean;
@@ -15,7 +13,6 @@ interface UseVideoOrientationProps {
 
 type OrientationTarget = ScreenOrientation.OrientationLock | 'unlock';
 
-// Preset configurations
 export const OrientationPresets = {
   CLASSIC: {
     allowFreeRotation: false,
@@ -60,7 +57,6 @@ export const getOrientationConfig = (preset: OrientationPreset) => {
   return OrientationPresets[preset];
 };
 
-// Utility functions
 const getTargetOrientation = (
   isFullscreen: boolean,
   justExitedFullscreen: boolean,
@@ -166,7 +162,6 @@ export const useVideoOrientation = ({
           await applyOrientationChange(targetOrientation, forceChange, currentOrientation);
         }
 
-        // Handle delayed unlock
         if (shouldDelayUnlock && !isFullscreen) {
           setTimeout(async () => {
             try {
@@ -198,7 +193,6 @@ export const useVideoOrientation = ({
     };
   }, [isFullscreen, allowFreeRotation, enableSmartLocking, lockPortraitWhenNotFullscreen]);
 
-  // Manual control functions
   const forcePortrait = async () => {
     try {
       await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);

@@ -118,7 +118,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     autoHideDelay: autoHideControlsDelay,
   });
 
-  // Orientation configuration
   const orientationConfig = orientationPreset 
     ? getOrientationConfig(orientationPreset) 
     : {
@@ -132,7 +131,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     ...orientationConfig,
   });
 
-  // Event handlers
   const handleVideoPress = () => {
     if (videoState.currentVideoUrl) {
       toggleControls();
@@ -198,7 +196,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     onVideoEnd?.();
   };
 
-  // Render placeholder if no video
   if (!videoState.currentVideoUrl) {
     return (
       <VideoPlaceholder
@@ -210,7 +207,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     );
   }
 
-  // Render video player
   return (
     <View style={{ flex: 1 }}>
       <VideoContainer
