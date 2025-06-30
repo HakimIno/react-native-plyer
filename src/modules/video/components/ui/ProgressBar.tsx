@@ -51,7 +51,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const progress = useSharedValue(0);
   const thumbScale = useSharedValue(1);
   const barHeight = useSharedValue(2.5);
-  
+
   const seekingPreviewPosition = useDerivedValue(() => {
     return Math.min(currentScreenWidth - 100, Math.max(50, progress.value + 20));
   });
@@ -61,7 +61,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   React.useEffect(() => {
     if (!isDragging) {
-      // อัปเดต progress.value เมื่อไม่ได้กำลังลากอยู่
       progress.value = withSpring(effectiveProgress, {
         damping: 20,
         stiffness: 200,
@@ -119,12 +118,12 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   const setSeekingPreview = (show: boolean) => {
     setShowSeekingPreview(show);
-    
+
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current);
       previewTimeoutRef.current = null;
     }
-    
+
     if (show) {
       previewTimeoutRef.current = setTimeout(() => {
         setShowSeekingPreview(false);
@@ -145,10 +144,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     if (barResetTimeoutRef.current) {
       clearTimeout(barResetTimeoutRef.current);
     }
-    
+
     thumbScale.value = withSpring(1.3, { damping: 15, stiffness: 200 });
     barHeight.value = withSpring(6, { damping: 15, stiffness: 200 });
-    
+
     // ตั้งเวลาให้บาร์กลับสู่สถานะปกติหลังจาก 2 วินาที หากไม่มีการลากต่อ
     barResetTimeoutRef.current = setTimeout(() => {
       resetBarToNormal();
@@ -157,16 +156,14 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   const panGesture = Gesture.Pan()
     .hitSlop({ top: 10, bottom: 10, left: 5, right: 5 })
-    .minDistance(3) // กำหนดระยะลากขั้นต่ำก่อนเริ่มพิจารณาเป็น Pan Gesture
+    .minDistance(3)
     .shouldCancelWhenOutside(false)
     .onStart((event) => {
-      // onStart จะทำงานเมื่อมีการแตะเริ่มต้น (ไม่ว่าจะเป็นแตะหรือลาก)
-      runOnJS(setDragging)(true); // ตั้งสถานะกำลังลากทันทีเมื่อเริ่มแตะ
-      runOnJS(setSeekingPreview)(true); // แสดงพรีวิวทันที
-      runOnJS(setBarToActive)(); // ขยายขนาดแถบและปุ่มทันที
-      runOnJS(setHasActuallyDragged)(false); // ตั้งค่าเริ่มต้นว่ายังไม่ได้ลากจริงๆ
+      runOnJS(setDragging)(true);
+      runOnJS(setSeekingPreview)(true);
+      runOnJS(setBarToActive)();
+      runOnJS(setHasActuallyDragged)(false);
 
-      // ตั้งค่าเวลาพรีวิวเริ่มต้น ณ จุดที่แตะ
       if (duration > 0) {
         const seekTime = (Math.max(0, Math.min(progressWidth, event.x)) / progressWidth) * duration;
         runOnJS(updatePreviewTime)(seekTime);
@@ -174,10 +171,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       }
     })
     .onUpdate((event) => {
-      runOnJS(setHasActuallyDragged)(true); 
-      
+      runOnJS(setHasActuallyDragged)(true);
+
       const clampedX = Math.max(0, Math.min(progressWidth, event.x));
-      progress.value = clampedX; 
+      progress.value = clampedX;
 
       if (duration > 0) {
         const seekTime = (clampedX / progressWidth) * duration;
@@ -186,43 +183,38 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       }
     })
     .onEnd(() => {
-      // onEnd ทำงานเมื่อยกนิ้วขึ้น
       if (barResetTimeoutRef.current) {
         clearTimeout(barResetTimeoutRef.current);
         barResetTimeoutRef.current = null;
       }
 
-      runOnJS(setDragging)(false); // ยกเลิกสถานะกำลังลาก
-      runOnJS(setSeekingPreview)(false); // ซ่อนพรีวิว
-      runOnJS(resetBarToNormal)(); // คืนขนาดแถบและปุ่มสู่ปกติ
+      runOnJS(setDragging)(false);
+      runOnJS(setSeekingPreview)(false);
+      runOnJS(resetBarToNormal)();
 
       if (hasActuallyDragged && duration > 0) {
-        // หากมีการลากจริง ให้ทำการ seek ไปยังตำแหน่งสุดท้ายที่ลาก
         const finalProgress = progress.value;
         const seekTime = (finalProgress / progressWidth) * duration;
         runOnJS(handleSeek)(seekTime);
       } else if (duration > 0) {
-        // หากเป็นการแตะ (ไม่มีการลากจริง) ให้ทำการ seek ไปยังตำแหน่งที่แตะครั้งแรก (previewTimeValue)
-        // หรือตำแหน่งปัจจุบันที่แสดงใน displayTime
-        runOnJS(handleSeek)(previewTimeValue); 
+        runOnJS(handleSeek)(previewTimeValue);
       }
-      
-      runOnJS(setHasActuallyDragged)(false); // รีเซ็ตสถานะการลากจริง
+
+      runOnJS(setHasActuallyDragged)(false);
     })
     .onTouchesCancelled(() => {
-      // onTouchesCancelled ทำงานเมื่อ gesture ถูกยกเลิก (เช่น มีการแจ้งเตือนเข้ามา)
       if (barResetTimeoutRef.current) {
         clearTimeout(barResetTimeoutRef.current);
         barResetTimeoutRef.current = null;
       }
-      
+
       runOnJS(setDragging)(false);
       runOnJS(setSeekingPreview)(false);
       runOnJS(resetBarToNormal)();
       runOnJS(setHasActuallyDragged)(false);
     });
 
-  const composedGesture = panGesture; // ยังคงใช้ gesture เดียว
+  const composedGesture = panGesture;
 
   const progressBarStyle = useAnimatedStyle(() => {
     return {
@@ -234,7 +226,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     const clampedX = Math.max(0, Math.min(progressWidth, progress.get()));
     return {
       transform: [
-        { translateX: clampedX - 8 }, 
+        { translateX: clampedX - 8 },
         { scale: thumbScale.get() }
       ],
     };
@@ -266,10 +258,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
             {formatTime(displayTime)}  /  {formatTime(duration)}
           </Text>
           <FullscreenButton
-              isFullscreen={isFullscreen}
-              onPress={handleFullscreenPress}
-              size={32}
-            />
+            isFullscreen={isFullscreen}
+            onPress={handleFullscreenPress}
+            size={32}
+          />
         </View>
       )}
 
@@ -286,7 +278,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         <GestureDetector gesture={composedGesture}>
           <View style={[styles.progressTrack, { width: progressWidth }]}>
             <View style={styles.touchArea} />
-            
+
             <View style={styles.visualTrack}>
               <Animated.View style={[styles.trackBackground, trackStyle]} />
               <Animated.View style={[styles.progressFill, progressStyle, progressBarStyle]}>
@@ -379,7 +371,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   visualTrack: {
-    height: 6, 
+    height: 6,
     justifyContent: 'center',
     position: 'relative',
   },

@@ -18,7 +18,6 @@ const PlaybackSpeedSelector: React.FC<PlaybackSpeedSelectorProps> = ({
     (left, right) => left === right
   );
 
-  // Use internal orientation detection for real-time updates
   const isLandscape = useMemo(() => 
     windowDimensions.width > windowDimensions.height,
     [windowDimensions.width, windowDimensions.height]
