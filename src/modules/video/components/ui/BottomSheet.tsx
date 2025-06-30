@@ -1,5 +1,5 @@
 import React, { useEffect, useImperativeHandle, forwardRef, useState, useMemo, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, Text, ViewStyle, useWindowDimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, Text, ViewStyle, useWindowDimensions, ScrollView } from 'react-native';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -15,10 +15,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSelector, shallowEqual } from 'react-redux';
 import { RootState } from '../../../../store';
 import PlaybackSpeedSelector from './PlaybackSpeedSelector';
+import SubtitleSelector from './SubtitleSelector';
 
 // Constants
 const SHEET_HEIGHT_PORTRAIT = 0.35;
-const SHEET_HEIGHT_LANDSCAPE = 0.65;
+const SHEET_HEIGHT_LANDSCAPE = 0.7;
 const ANIMATION_DURATION = 250;
 const CLOSE_ANIMATION_DURATION = 200;
 const Z_INDEX_NORMAL = 1500;
@@ -63,31 +64,25 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
   ({ isVisible, onClose, children, isFullscreen = false }, ref) => {
     const { bottom } = useSafeAreaInsets();
     
-    // Animated values
     const translateY = useSharedValue(0);
     const active = useSharedValue(false);
     const context = useSharedValue({ y: 0 });
     
-    // Screen dimensions
     const [screenData, setScreenData] = useState(getScreenDimensions);
     
-    // Shared values for worklets
     const screenHeight = useSharedValue(screenData.height);
     const isLandscape = useSharedValue(screenData.isLandscape);
 
-    // Cached values to reduce calculations
     const sheetConfig = useMemo(() => ({
       height: calculateSheetHeight(screenData),
       zIndex: isFullscreen ? Z_INDEX_FULLSCREEN : Z_INDEX_NORMAL,
     }), [screenData, isFullscreen]);
 
-    // Update shared values when screen data changes
     useEffect(() => {
       screenHeight.value = screenData.height;
       isLandscape.value = screenData.isLandscape;
     }, [screenData]);
 
-    // Dimension change handler
     useEffect(() => {
       const subscription = Dimensions.addEventListener('change', ({ window }) => {
         const newData = {
@@ -101,36 +96,33 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
       return () => subscription?.remove();
     }, []);
 
-      // Animation functions
-  const open = useCallback(() => {
-    'worklet';
-    active.value = true;
-    const currentHeight = isLandscape.value
-      ? screenHeight.value * SHEET_HEIGHT_LANDSCAPE
-      : screenHeight.value * SHEET_HEIGHT_PORTRAIT;
-    const maxTranslateY = -currentHeight;
-    
-    translateY.value = withTiming(maxTranslateY, {
-      duration: ANIMATION_DURATION,
-      easing: Easing.out(Easing.quad),
-    });
-  }, []);
+    const open = useCallback(() => {
+      'worklet';
+      active.value = true;
+      const currentHeight = isLandscape.value
+        ? screenHeight.value * SHEET_HEIGHT_LANDSCAPE
+        : screenHeight.value * SHEET_HEIGHT_PORTRAIT;
+      const maxTranslateY = -currentHeight;
+      
+      translateY.value = withTiming(maxTranslateY, {
+        duration: ANIMATION_DURATION,
+        easing: Easing.out(Easing.quad),
+      });
+    }, []);
 
-  const close = useCallback(() => {
-    'worklet';
-    active.value = false;
-    translateY.value = withTiming(0, {
-      duration: CLOSE_ANIMATION_DURATION,
-      easing: Easing.out(Easing.quad),
-    });
-  }, []);
+    const close = useCallback(() => {
+      'worklet';
+      active.value = false;
+      translateY.value = withTiming(0, {
+        duration: CLOSE_ANIMATION_DURATION,
+        easing: Easing.out(Easing.quad),
+      });
+    }, []);
 
-      const isActive = useCallback(() => active.value, []);
+    const isActive = useCallback(() => active.value, []);
 
-  // Imperative handle
-  useImperativeHandle(ref, () => ({ open, close, isActive }), [open, close, isActive]);
+    useImperativeHandle(ref, () => ({ open, close, isActive }), [open, close, isActive]);
 
-    // Visibility effect
     useEffect(() => {
       if (isVisible) {
         open();
@@ -139,8 +131,8 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
       }
     }, [isVisible]);
 
-    // Gesture handlers
-    const panGesture = Gesture.Pan()
+    // Pan gesture only for the line/header area to avoid ScrollView conflicts
+    const headerPanGesture = Gesture.Pan()
       .onStart(() => {
         'worklet';
         context.value = { y: translateY.value };
@@ -189,7 +181,6 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
       runOnJS(onClose)();
     });
 
-    // Animated styles
     const rBottomSheetStyle = useAnimatedStyle(() => {
       const currentHeight = isLandscape.value
         ? screenHeight.value * SHEET_HEIGHT_LANDSCAPE
@@ -218,7 +209,6 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
       };
     }, [isVisible]);
 
-    // Memoized container style
     const containerStyle = useMemo((): ViewStyle => ({
       height: sheetConfig.height,
       top: screenData.height,
@@ -241,68 +231,74 @@ export const BottomSheet = forwardRef<BottomSheetRefProps, BottomSheetProps>(
           <Animated.View style={[styles.backdrop, backdropStyle, rBackdropStyle]} pointerEvents={isVisible ? 'auto' : 'none'} />
         </GestureDetector>
 
-        <GestureDetector gesture={panGesture}>
-          <Animated.View style={[styles.bottomSheetContainer, containerStyle, rBottomSheetStyle]}>
-            <View style={styles.line} />
-            <View style={[styles.content, screenData.isLandscape && styles.contentLandscape]}>
-              {children}
+        <Animated.View style={[styles.bottomSheetContainer, containerStyle, rBottomSheetStyle]}>
+          <GestureDetector gesture={headerPanGesture}>
+            <View style={styles.headerDragArea}>
+              <View style={styles.line} />
             </View>
-          </Animated.View>
-        </GestureDetector>
+          </GestureDetector>
+          <ScrollView 
+            style={[styles.content, screenData.isLandscape && styles.contentLandscape]}
+            showsVerticalScrollIndicator={false}
+            bounces={false}
+            contentContainerStyle={styles.scrollContent}
+            scrollEnabled={false}
+          >
+            {children}
+          </ScrollView>
+        </Animated.View>
       </>
     );
   }
 );
 
-// VideoOptionsContent
 interface VideoOptionsContentProps {
   isVisible?: boolean;
 }
 
 const VideoOptionsContent: React.FC<VideoOptionsContentProps> = ({ isVisible = true }) => {
   const windowDimensions = useWindowDimensions();
-  const [currentView, setCurrentView] = useState<'main' | 'playback-speed'>('main');
-  const selectedSpeed = useSelector((state: RootState) => state.video.playbackRate);
+  const [currentView, setCurrentView] = useState<'main' | 'playback-speed' | 'subtitles'>('main');
+  const selectedSpeed = useSelector((state: RootState) => (state.video as any).playbackRate);
+  const { availableTextTracks, selectedTextTrack } = useSelector((state: RootState) => state.video as any);
 
-  // Reset to main view when bottom sheet is closed
   useEffect(() => {
     if (!isVisible) {
       setCurrentView('main');
     }
   }, [isVisible]);
   
-  // Calculate screen data from window dimensions for real-time updates
   const screenData = useMemo(() => ({
     width: windowDimensions.width,
     height: windowDimensions.height,
     isLandscape: windowDimensions.width > windowDimensions.height,
   }), [windowDimensions.width, windowDimensions.height]);
   
-  // Animation for slide transition - use shared values for better performance
   const slideX = useSharedValue(0);
   const screenWidth = useSharedValue(screenData.width);
 
-  // Update screen width shared value when screen data changes
   useEffect(() => {
     screenWidth.value = screenData.width;
   }, [screenData.width]);
 
-  // Animate slide transition when currentView changes - optimized version
   useEffect(() => {
     if (currentView === 'playback-speed') {
-      // Slide to show playback speed view - faster animation
       slideX.value = withTiming(-screenWidth.value, {
-        duration: 200, // Reduced from 300ms
-        easing: Easing.out(Easing.cubic), // More responsive easing
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
+      });
+    } else if (currentView === 'subtitles') {
+      slideX.value = withTiming(-screenWidth.value * 2, {
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
       });
     } else {
-      // Slide back to main view - faster animation
       slideX.value = withTiming(0, {
-        duration: 200, // Reduced from 300ms
-        easing: Easing.out(Easing.cubic), // More responsive easing
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
       });
     }
-  }, [currentView, slideX, screenWidth]); // Added dependencies for completeness
+  }, [currentView, slideX, screenWidth]);
 
   const mainOptions = useMemo(() => [
     { id: 'playback-speed', title: 'Playback Speed', icon: 'speedometer-outline' as const },
@@ -317,13 +313,11 @@ const VideoOptionsContent: React.FC<VideoOptionsContentProps> = ({ isVisible = t
         setCurrentView('playback-speed');
         break;
       case 'quality':
-        // Handle quality selection
         break;
       case 'subtitles':
-        // Handle subtitles selection
+        setCurrentView('subtitles');
         break;
       case 'audio':
-        // Handle audio track selection
         break;
       default:
         break;
@@ -334,7 +328,6 @@ const VideoOptionsContent: React.FC<VideoOptionsContentProps> = ({ isVisible = t
     setCurrentView('main');
   }, []);
 
-  // Animated styles for both views
   const mainViewStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateX: slideX.value }],
@@ -344,6 +337,12 @@ const VideoOptionsContent: React.FC<VideoOptionsContentProps> = ({ isVisible = t
   const speedViewStyle = useAnimatedStyle(() => {
     return {
       transform: [{ translateX: slideX.value + screenWidth.value }],
+    };
+  });
+
+  const subtitleViewStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateX: slideX.value + screenWidth.value * 2 }],
     };
   });
 
@@ -363,6 +362,17 @@ const VideoOptionsContent: React.FC<VideoOptionsContentProps> = ({ isVisible = t
               {option.id === 'playback-speed' && (
                 <Text style={styles.currentValueText}>{selectedSpeed}x</Text>
               )}
+              {option.id === 'subtitles' && (
+                <Text style={styles.currentValueText}>
+                  {selectedTextTrack.type === 'disabled' 
+                    ? 'Off' 
+                    : selectedTextTrack.type === 'index' && availableTextTracks[selectedTextTrack.value as number]
+                    ? availableTextTracks[selectedTextTrack.value as number].label || `Track ${(selectedTextTrack.value as number) + 1}`
+                    : availableTextTracks.length > 0 
+                    ? availableTextTracks[0].label || 'Track 1'
+                    : 'None'}
+                </Text>
+              )}
               <Ionicons name="chevron-forward" size={20} color="#fff" />
             </TouchableOpacity>
           ))}
@@ -371,6 +381,13 @@ const VideoOptionsContent: React.FC<VideoOptionsContentProps> = ({ isVisible = t
         {/* Playback Speed View */}
         <Animated.View style={[styles.slideView, speedViewStyle]}>
           <PlaybackSpeedSelector
+            onBackPress={handleBackPress}
+          />
+        </Animated.View>
+
+        {/* Subtitles View */}
+        <Animated.View style={[styles.slideView, subtitleViewStyle]}>
+          <SubtitleSelector
             onBackPress={handleBackPress}
           />
         </Animated.View>
@@ -401,18 +418,20 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingTop: 20,
-    paddingBottom: 20,
   },
   contentLandscape: {
-    paddingTop: 15,
-    paddingBottom: 15,
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 25,
   },
   optionsContainer: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
   },
   optionsContainerLandscape: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 0,
   },
   optionItem: {
     flexDirection: 'row',
@@ -446,6 +465,9 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     width: '100%',
+  },
+  headerDragArea: {
+    padding: 10,
   },
 });
 

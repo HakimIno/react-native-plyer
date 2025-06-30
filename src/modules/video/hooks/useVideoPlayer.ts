@@ -15,6 +15,7 @@ import {
   addToPlaylist,
   removeFromPlaylist,
   setSeekingInProgress,
+  setAvailableTextTracks,
   resetVideoState,
 } from '../../../store/slices/videoSlice';
 import { VideoItem } from '../../../types';
@@ -26,6 +27,10 @@ export const useVideoPlayer = () => {
   const videoRef = useRef<any>(null);
   const isUserSeeking = useRef<boolean>(false);
   const pendingSeekTime = useRef<number | null>(null);
+
+  const getCurrentVideo = () => {
+    return videoState.videoList[videoState.currentVideoIndex] || null;
+  };
 
   useEffect(() => {
     if (!videoRef.current) return;
@@ -42,13 +47,10 @@ export const useVideoPlayer = () => {
     videoRef.current.setVolume?.(videoState.isMuted ? 0 : videoState.volume);
   }, [videoState.volume, videoState.isMuted]);
 
-  // Note: playback rate is handled by the `rate` prop in VideoContainer automatically
-
   const setVideoRef = (ref: any) => {
     videoRef.current = ref;
   };
 
-  // Playback controls
   const play = () => {
     dispatch(setPlaying(true));
   };
@@ -68,22 +70,17 @@ export const useVideoPlayer = () => {
 
     const clampedTime = Math.max(0, Math.min(videoState.duration, time));
     
-    // Mark that user is seeking
     isUserSeeking.current = true;
     pendingSeekTime.current = clampedTime;
 
-    // Start seeking indicator
     dispatch(setSeekingInProgress(true));
     
-    // Immediately update the displayed time for smooth UI
     dispatch(forceSetCurrentTime(clampedTime));
     
-    // Perform the actual seek
     try {
       videoRef.current.seek(clampedTime);
     } catch (error) {
       console.warn('Seek error:', error);
-      // If seek fails, clear the seeking state
       isUserSeeking.current = false;
       pendingSeekTime.current = null;
       dispatch(setSeekingInProgress(false));
@@ -125,7 +122,6 @@ export const useVideoPlayer = () => {
 
   // Video management
   const loadVideo = (video: VideoItem, index?: number) => {
-    // Reset state when loading new video
     dispatch(resetVideoState());
     isUserSeeking.current = false;
     pendingSeekTime.current = null;
@@ -141,7 +137,6 @@ export const useVideoPlayer = () => {
   };
 
   const setCurrentVideoFn = (video: VideoItem, index?: number) => {
-    // Reset state when setting new video
     dispatch(resetVideoState());
     isUserSeeking.current = false;
     pendingSeekTime.current = null;
@@ -150,6 +145,10 @@ export const useVideoPlayer = () => {
       url: video.url, 
       title: video.title 
     }));
+    
+    if (video.textTracks) {
+      dispatch(setAvailableTextTracks(video.textTracks));
+    }
     
     if (index !== undefined) {
       dispatch(setCurrentVideoIndex(index));
@@ -162,23 +161,23 @@ export const useVideoPlayer = () => {
     pendingSeekTime.current = null;
   };
 
-  // Internal handlers for video events - improved
   const handleProgress = (data: { currentTime: number; playableDuration?: number }) => {
-    // Completely block progress updates if user is seeking
     if (isUserSeeking.current || videoState.isSeekingInProgress) {
       return;
     }
 
-    // Update current time only if we're not seeking
     if (data.currentTime !== undefined) {
       dispatch(setCurrentTime(data.currentTime));
     }
   };
 
-  const handleLoad = (data: { duration: number; naturalSize?: any }) => {
+  const handleLoad = (data: { duration: number; naturalSize?: any; textTracks?: any[] }) => {
     if (data.duration && data.duration > 0) {
       dispatch(setDuration(data.duration));
     }
+    
+    console.log('Video loaded with text tracks:', data.textTracks || 'none');
+    
     dispatch(setBuffering(false));
     dispatch(setSeekingInProgress(false));
     isUserSeeking.current = false;
@@ -201,14 +200,12 @@ export const useVideoPlayer = () => {
   };
 
   const handleSeek = (data: { currentTime: number; seekTime: number }) => {
-    // Handle actual seek completion
     dispatch(setSeekingInProgress(false));
     
     if (data.currentTime !== undefined) {
       dispatch(setCurrentTime(data.currentTime));
     }
     
-    // Clear seeking flags
     isUserSeeking.current = false;
     pendingSeekTime.current = null;
   };
@@ -217,11 +214,13 @@ export const useVideoPlayer = () => {
     dispatch(toggleFullscreen());
   };
 
+  const handleTextTracks = (data: { textTracks: any[] }) => {
+    console.log('Text tracks changed:', data.textTracks);
+  };
+
   return {
-    // State
     videoState,
     
-    // Refs
     setVideoRef,
     
     // Playback controls
@@ -240,6 +239,7 @@ export const useVideoPlayer = () => {
     // Video management
     loadVideo,
     setCurrentVideo: setCurrentVideoFn,
+    getCurrentVideo,
     reset,
     
     // Event handlers
@@ -249,6 +249,7 @@ export const useVideoPlayer = () => {
     handleLoadStart,
     handleEnd,
     handleSeek,
+    handleTextTracks,
     handleFullscreenChange,
   };
 };

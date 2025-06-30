@@ -11,6 +11,15 @@ export interface VideoState {
   currentVideoTitle?: string;
 }
 
+export interface TextTrack {
+  src: string;
+  label: string;
+  language: string;
+  kind: string;
+  type: string;
+  default?: boolean;
+}
+
 export interface VideoItem {
   id: string;
   title: string;
@@ -18,7 +27,10 @@ export interface VideoItem {
   thumbnail?: string;
   duration?: number;
   isLocal: boolean;
+  textTracks?: TextTrack[];
 }
+
+
 
 export interface PlayerControls {
   play: () => void;

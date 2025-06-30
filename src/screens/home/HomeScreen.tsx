@@ -56,6 +56,7 @@ const HomeScreen = ({ navigation }: Props) => {
       thumbnail: '', // No thumbnail - will auto-generate
       duration: 214,
       isLocal: false,
+      
     },
     {
       id: '4',
@@ -64,6 +65,31 @@ const HomeScreen = ({ navigation }: Props) => {
       thumbnail: '',
       duration: 629,
       isLocal: false,
+      textTracks: [
+        {
+          src: "https://files.vidstack.io/sprite-fight/subs/english.vtt",
+          label: "English",
+          language: "en-US",
+          kind: "subtitles",
+          type: "vtt",
+          default: true
+        },
+        {
+          src: "https://files.vidstack.io/sprite-fight/subs/spanish.vtt",
+          label: "Spanish",
+          language: "es-ES",
+          kind: "subtitles",
+          type: "vtt"
+        },
+        {
+          src: "https://files.vidstack.io/sprite-fight/chapters.vtt",
+          label: "Chapters",
+          language: "en-US",
+          kind: "chapters",
+          type: "vtt",
+          default: true
+        }
+      ]
     },
   ];
 
@@ -84,7 +110,7 @@ const HomeScreen = ({ navigation }: Props) => {
 
   useEffect(() => {
     const loadThumbnailsForVideos = async () => {
-      const videosNeedingThumbnails = videoList.filter(video => {
+      const videosNeedingThumbnails = videoList.filter((video: VideoItem) => {
         const shouldGenerateThumbnail = !video.thumbnail ||
           video.thumbnail.includes('placeholder') ||
           video.thumbnail.includes('via.placeholder.com') ||

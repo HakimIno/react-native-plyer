@@ -97,12 +97,14 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     handleLoadStart,
     handleEnd,
     handleSeek,
+    handleTextTracks,
     togglePlayPause,
     toggleFullscreen,
     seek,
     seekBackward,
     seekForward,
     play,
+    getCurrentVideo,
   } = useVideoPlayer();
 
   const {
@@ -223,6 +225,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         isMuted={videoState.isMuted}
         playbackRate={videoState.playbackRate}
         isFullscreen={videoState.isFullscreen}
+        textTracks={videoState.availableTextTracks}
+        selectedTextTrack={videoState.selectedTextTrack}
         screenWidth={screenData.width}
         isLandscape={screenData.isLandscape}
         safeAreaTop={top}
@@ -235,6 +239,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         onLoadStart={handleLoadStart}
         onEnd={handleVideoEnd}
         onSeek={handleSeek}
+        onTextTracks={handleTextTracks}
         onPlayPause={handlePlayPausePress}
         onSeekBackward={handleSeekBackward}
         onSeekForward={handleSeekForward}

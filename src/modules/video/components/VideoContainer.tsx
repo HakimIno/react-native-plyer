@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableWithoutFeedback, StatusBar, ColorValue } fro
 import Video from 'react-native-video';
 import { VideoOverlay } from './VideoOverlay';
 import { SharedValue } from 'react-native-reanimated';
+import { TextTrack } from '../../../types';
 
 interface VideoContainerProps {
   // Video source and ref
@@ -19,6 +20,13 @@ interface VideoContainerProps {
   isMuted: boolean;
   playbackRate: number;
   isFullscreen: boolean;
+
+  // Subtitle state
+  textTracks?: TextTrack[];
+  selectedTextTrack?: {
+    type: 'system' | 'disabled' | 'index' | 'language' | 'title';
+    value?: string | number;
+  };
   
   // Screen info
   screenWidth: number;
@@ -37,6 +45,7 @@ interface VideoContainerProps {
   onLoadStart: () => void;
   onEnd: () => void;
   onSeek: (data: any) => void;
+  onTextTracks?: (data: any) => void;
   onPlayPause: () => void;
   onSeekBackward: () => void;
   onSeekForward: () => void;
@@ -69,6 +78,8 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
   isMuted,
   playbackRate,
   isFullscreen,
+  textTracks = [],
+  selectedTextTrack,
   screenWidth,
   isLandscape,
   safeAreaTop,
@@ -81,6 +92,7 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
   onLoadStart,
   onEnd,
   onSeek,
+  onTextTracks,
   onPlayPause,
   onSeekBackward,
   onSeekForward,
@@ -96,6 +108,44 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
   showTimeLabels = true,
   colors,
 }) => {
+  const formattedTextTracks = textTracks.map(track => ({
+    title: track.label,
+    language: track.language.substring(0, 2).toLowerCase() as any,
+    type: 'text/vtt' as any,
+    uri: track.src,
+  }));
+
+  const formattedSelectedTextTrack = selectedTextTrack ? (() => {
+    switch (selectedTextTrack.type) {
+      case 'disabled':
+        return { type: 'disabled' as any };
+      case 'index':
+        const index = selectedTextTrack.value as number;
+        if (index >= 0 && index < formattedTextTracks.length) {
+          return { type: 'index' as any, value: index };
+        }
+        return { type: 'disabled' as any };
+      case 'language':
+        return { type: 'language' as any, value: selectedTextTrack.value };
+      case 'title':
+        return { type: 'title' as any, value: selectedTextTrack.value };
+      case 'system':
+      default:
+        const defaultTrack = formattedTextTracks.findIndex(track => 
+          textTracks.find(original => original.src === track.uri)?.default
+        );
+        if (defaultTrack >= 0) {
+          return { type: 'index' as any, value: defaultTrack };
+        }
+        return formattedTextTracks.length > 0 
+          ? { type: 'index' as any, value: 0 }
+          : { type: 'disabled' as any };
+    }
+  })() : formattedTextTracks.length > 0 
+    ? { type: 'index' as any, value: 0 }
+    : { type: 'disabled' as any };
+
+
   const containerStyle = [
     styles.container,
     isFullscreen && styles.fullscreenContainer,
@@ -118,6 +168,7 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
             onLoadStart={onLoadStart}
             onEnd={onEnd}
             onSeek={onSeek}
+            onTextTracks={onTextTracks}
             paused={!isPlaying}
             volume={isMuted ? 0 : volume}
             rate={playbackRate}
@@ -131,6 +182,10 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
             playWhenInactive={false}
             playInBackground={false}
             progressUpdateInterval={100}
+            textTracks={formattedTextTracks}
+            subtitleStyle={{ paddingBottom: isFullscreen ? 100 : 10, fontSize: isFullscreen ? 18 : 16, opacity: 1, }}
+            selectedTextTrack={formattedSelectedTextTrack}
+            
           />
 
           <VideoOverlay

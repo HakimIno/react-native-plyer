@@ -113,6 +113,12 @@ export const VideoOverlay: React.FC<VideoOverlayProps> = ({
         colors={colors}
       />
 
+      {/* Subtitle Overlay */}
+      {/* <SubtitleOverlay 
+        currentTime={currentTime}
+        isVisible={true} // Always show subtitles
+      /> */}
+
       {/* Gradient Overlay */}
       <View style={styles.bottomGradient} />
     </Animated.View>

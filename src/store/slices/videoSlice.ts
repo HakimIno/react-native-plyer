@@ -1,5 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { VideoItem } from '../../types';
+import { VideoItem, TextTrack } from '../../types';
 
 export interface VideoState {
   // Playback state
@@ -16,6 +16,13 @@ export interface VideoState {
   // Current video
   currentVideoUrl: string;
   currentVideoTitle: string;
+
+  // Subtitle state
+  selectedTextTrack: {
+    type: 'system' | 'disabled' | 'index' | 'language' | 'title';
+    value?: string | number;
+  };
+  availableTextTracks: TextTrack[];
 
   // Playlist
   videoList: VideoItem[];
@@ -37,6 +44,10 @@ const initialState: VideoState = {
   // Current video
   currentVideoUrl: '',
   currentVideoTitle: '',
+
+  // Subtitle state
+  selectedTextTrack: { type: 'index', value: 0 }, // Default to first subtitle track
+  availableTextTracks: [],
 
   // Playlist
   videoList: [],
@@ -89,6 +100,14 @@ const videoSlice = createSlice({
       state.isSeekingInProgress = action.payload;
     },
 
+    setSelectedTextTrack: (state, action: PayloadAction<{ type: 'system' | 'disabled' | 'index' | 'language' | 'title'; value?: string | number }>) => {
+      state.selectedTextTrack = action.payload;
+    },
+
+    setAvailableTextTracks: (state, action: PayloadAction<TextTrack[]>) => {
+      state.availableTextTracks = action.payload;
+    },
+
     setCurrentVideo: (state, action: PayloadAction<{ url: string; title: string }>) => {
       state.currentVideoUrl = action.payload.url;
       state.currentVideoTitle = action.payload.title;
@@ -97,6 +116,9 @@ const videoSlice = createSlice({
       state.duration = 0;
       state.isPlaying = false;
       state.isBuffering = true;
+      // Reset subtitle tracks for new video
+      state.availableTextTracks = [];
+      state.selectedTextTrack = { type: 'index', value: 0 }; // Default to first track
     },
 
     setCurrentVideoIndex: (state, action: PayloadAction<number>) => {
@@ -140,6 +162,8 @@ export const {
   toggleFullscreen,
   setPlaybackRate,
   setSeekingInProgress,
+  setSelectedTextTrack,
+  setAvailableTextTracks,
   setCurrentVideo,
   setCurrentVideoIndex,
   addToPlaylist,

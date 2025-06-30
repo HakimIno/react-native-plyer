@@ -13,14 +13,12 @@ interface VideoTopControlsProps {
 export const VideoTopControls: React.FC<VideoTopControlsProps> = ({
   onOptionsPress,
   safeAreaTop,
-  isLandscape,
   optionsButtonSize = 25,
   optionsButtonColor = '#fff',
 }) => {
   const topControlsStyle = [
     styles.topControls,
     { top: safeAreaTop + 20, right: 20 },
-    isLandscape && styles.topControlsLandscape
   ];
 
   return (
@@ -39,7 +37,5 @@ const styles = StyleSheet.create({
   topControls: {
     position: 'absolute',
   },
-  topControlsLandscape: {
-    top: 20,
-  },
+  
 }); 
