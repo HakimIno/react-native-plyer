@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback, StatusBar } from 'react-native';
+import { View, StyleSheet, TouchableWithoutFeedback, StatusBar, ColorValue } from 'react-native';
 import Video from 'react-native-video';
 import { VideoOverlay } from './VideoOverlay';
 import { SharedValue } from 'react-native-reanimated';
@@ -54,6 +54,7 @@ interface VideoContainerProps {
   seekSeconds?: number;
   optionsButtonSize?: number;
   showTimeLabels?: boolean;
+  colors: readonly [ColorValue, ColorValue, ...ColorValue[]];
 }
 
 export const VideoContainer: React.FC<VideoContainerProps> = ({
@@ -93,6 +94,7 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
   seekSeconds = 10,
   optionsButtonSize = 25,
   showTimeLabels = true,
+  colors,
 }) => {
   const containerStyle = [
     styles.container,
@@ -154,6 +156,7 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
             seekSeconds={seekSeconds}
             optionsButtonSize={optionsButtonSize}
             showTimeLabels={showTimeLabels}
+            colors={colors}
           />
         </View>
       </TouchableWithoutFeedback>

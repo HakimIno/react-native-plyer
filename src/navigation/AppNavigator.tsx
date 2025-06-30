@@ -29,7 +29,9 @@ const AppNavigator: React.FC = () => {
           options={{
             title: 'Video Player',
             headerShown: false,
+            animation: 'fade',
           }}
+          
         />
         <Stack.Screen 
           name="Player" 
@@ -37,6 +39,7 @@ const AppNavigator: React.FC = () => {
           options={{
             title: 'Video Player',
             headerShown: false,
+            animation: 'slide_from_right',
           }}
         />
         <Stack.Screen 
@@ -45,6 +48,7 @@ const AppNavigator: React.FC = () => {
           options={{
             title: 'Add Video',
             headerShown: false,
+            animation: 'slide_from_right',
           }}
         />
       </Stack.Navigator>

@@ -248,6 +248,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         seekSeconds={seekSeconds}
         optionsButtonSize={optionsButtonSize}
         showTimeLabels={showTimeLabels}
+        colors={['#007AFF', '#007AFF', '#007AFF']}
       />
 
       <BottomSheet

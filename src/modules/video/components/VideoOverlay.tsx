@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ColorValue } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { SharedValue } from 'react-native-reanimated';
 import { VideoControls } from './VideoControls';
@@ -38,6 +38,8 @@ interface VideoOverlayProps {
   seekSeconds?: number;
   optionsButtonSize?: number;
   showTimeLabels?: boolean;
+
+  colors: readonly [ColorValue, ColorValue, ...ColorValue[]];
 }
 
 export const VideoOverlay: React.FC<VideoOverlayProps> = ({
@@ -63,6 +65,7 @@ export const VideoOverlay: React.FC<VideoOverlayProps> = ({
   seekSeconds = 10,
   optionsButtonSize = 25,
   showTimeLabels = true,
+  colors,
 }) => {
   const controlsStyle = useAnimatedStyle(() => {
     return {
@@ -107,6 +110,7 @@ export const VideoOverlay: React.FC<VideoOverlayProps> = ({
         screenWidth={screenWidth}
         isLandscape={isLandscape}
         showTimeLabels={showTimeLabels}
+        colors={colors}
       />
 
       {/* Gradient Overlay */}

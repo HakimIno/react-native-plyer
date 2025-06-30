@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, StyleSheet, Dimensions, Text, ActivityIndicator, Vibration } from 'react-native';
+import { View, StyleSheet, Dimensions, Text, ActivityIndicator, Vibration, ColorValue } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   useSharedValue,
@@ -10,6 +10,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { FullscreenButton } from './FullscreenButton';
+import { formatTime } from '../../utility/helpers/timeUtils';
 
 interface ProgressBarProps {
   currentTime: number;
@@ -20,20 +21,8 @@ interface ProgressBarProps {
   screenWidth?: number;
   isFullscreen: boolean;
   handleFullscreenPress: () => void;
+  colors: readonly [ColorValue, ColorValue, ...ColorValue[]];
 }
-
-const formatTime = (seconds: number): string => {
-  if (!seconds || seconds <= 0) return '0:00';
-
-  const hours = Math.floor(seconds / 3600);
-  const minutes = Math.floor((seconds % 3600) / 60);
-  const remainingSeconds = Math.floor(seconds % 60);
-
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-  }
-  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-};
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   currentTime,
@@ -44,6 +33,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   screenWidth,
   isFullscreen,
   handleFullscreenPress,
+  colors,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showSeekingPreview, setShowSeekingPreview] = useState(false);
@@ -71,6 +61,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   React.useEffect(() => {
     if (!isDragging) {
+      // อัปเดต progress.value เมื่อไม่ได้กำลังลากอยู่
       progress.value = withSpring(effectiveProgress, {
         damping: 20,
         stiffness: 200,
@@ -158,6 +149,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     thumbScale.value = withSpring(1.3, { damping: 15, stiffness: 200 });
     barHeight.value = withSpring(6, { damping: 15, stiffness: 200 });
     
+    // ตั้งเวลาให้บาร์กลับสู่สถานะปกติหลังจาก 2 วินาที หากไม่มีการลากต่อ
     barResetTimeoutRef.current = setTimeout(() => {
       resetBarToNormal();
     }, 2000);
@@ -165,14 +157,16 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   const panGesture = Gesture.Pan()
     .hitSlop({ top: 10, bottom: 10, left: 5, right: 5 })
-    .minDistance(3)
+    .minDistance(3) // กำหนดระยะลากขั้นต่ำก่อนเริ่มพิจารณาเป็น Pan Gesture
     .shouldCancelWhenOutside(false)
-    .onBegin((event) => {
-      runOnJS(setDragging)(true);
-      runOnJS(setSeekingPreview)(true);
-      runOnJS(setBarToActive)();
-      runOnJS(setHasActuallyDragged)(false);
-      
+    .onStart((event) => {
+      // onStart จะทำงานเมื่อมีการแตะเริ่มต้น (ไม่ว่าจะเป็นแตะหรือลาก)
+      runOnJS(setDragging)(true); // ตั้งสถานะกำลังลากทันทีเมื่อเริ่มแตะ
+      runOnJS(setSeekingPreview)(true); // แสดงพรีวิวทันที
+      runOnJS(setBarToActive)(); // ขยายขนาดแถบและปุ่มทันที
+      runOnJS(setHasActuallyDragged)(false); // ตั้งค่าเริ่มต้นว่ายังไม่ได้ลากจริงๆ
+
+      // ตั้งค่าเวลาพรีวิวเริ่มต้น ณ จุดที่แตะ
       if (duration > 0) {
         const seekTime = (Math.max(0, Math.min(progressWidth, event.x)) / progressWidth) * duration;
         runOnJS(updatePreviewTime)(seekTime);
@@ -180,10 +174,10 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       }
     })
     .onUpdate((event) => {
-      runOnJS(setHasActuallyDragged)(true);
+      runOnJS(setHasActuallyDragged)(true); 
       
       const clampedX = Math.max(0, Math.min(progressWidth, event.x));
-      progress.value = clampedX;
+      progress.value = clampedX; 
 
       if (duration > 0) {
         const seekTime = (clampedX / progressWidth) * duration;
@@ -192,24 +186,31 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       }
     })
     .onEnd(() => {
+      // onEnd ทำงานเมื่อยกนิ้วขึ้น
       if (barResetTimeoutRef.current) {
         clearTimeout(barResetTimeoutRef.current);
         barResetTimeoutRef.current = null;
       }
 
-      runOnJS(setDragging)(false);
-      runOnJS(setSeekingPreview)(false);
-      runOnJS(resetBarToNormal)();
+      runOnJS(setDragging)(false); // ยกเลิกสถานะกำลังลาก
+      runOnJS(setSeekingPreview)(false); // ซ่อนพรีวิว
+      runOnJS(resetBarToNormal)(); // คืนขนาดแถบและปุ่มสู่ปกติ
 
       if (hasActuallyDragged && duration > 0) {
+        // หากมีการลากจริง ให้ทำการ seek ไปยังตำแหน่งสุดท้ายที่ลาก
         const finalProgress = progress.value;
         const seekTime = (finalProgress / progressWidth) * duration;
         runOnJS(handleSeek)(seekTime);
+      } else if (duration > 0) {
+        // หากเป็นการแตะ (ไม่มีการลากจริง) ให้ทำการ seek ไปยังตำแหน่งที่แตะครั้งแรก (previewTimeValue)
+        // หรือตำแหน่งปัจจุบันที่แสดงใน displayTime
+        runOnJS(handleSeek)(previewTimeValue); 
       }
       
-      runOnJS(setHasActuallyDragged)(false);
+      runOnJS(setHasActuallyDragged)(false); // รีเซ็ตสถานะการลากจริง
     })
     .onTouchesCancelled(() => {
+      // onTouchesCancelled ทำงานเมื่อ gesture ถูกยกเลิก (เช่น มีการแจ้งเตือนเข้ามา)
       if (barResetTimeoutRef.current) {
         clearTimeout(barResetTimeoutRef.current);
         barResetTimeoutRef.current = null;
@@ -221,7 +222,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       runOnJS(setHasActuallyDragged)(false);
     });
 
-  const composedGesture = panGesture;
+  const composedGesture = panGesture; // ยังคงใช้ gesture เดียว
 
   const progressBarStyle = useAnimatedStyle(() => {
     return {
@@ -284,15 +285,13 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       <View style={styles.progressContainer} pointerEvents="box-only">
         <GestureDetector gesture={composedGesture}>
           <View style={[styles.progressTrack, { width: progressWidth }]}>
-            {/* Invisible touch area */}
             <View style={styles.touchArea} />
             
-            {/* Visual progress bar */}
             <View style={styles.visualTrack}>
               <Animated.View style={[styles.trackBackground, trackStyle]} />
               <Animated.View style={[styles.progressFill, progressStyle, progressBarStyle]}>
                 <LinearGradient
-                  colors={['#007AFF', '#007AFF', '#007AFF']}
+                  colors={colors}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.gradientFill}
@@ -300,7 +299,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
               </Animated.View>
               <Animated.View style={[styles.thumb, thumbStyle]}>
                 <LinearGradient
-                  colors={['#007AFF', '#007AFF', '#007AFF']}
+                  colors={colors}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.gradientThumb}
@@ -415,4 +414,4 @@ const styles = StyleSheet.create({
     flex: 1,
     borderRadius: 6,
   },
-}); 
+});

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, ColorValue } from 'react-native';
 import { ProgressBar } from './ui/ProgressBar';
 
 interface VideoBottomControlsProps {
@@ -12,6 +12,7 @@ interface VideoBottomControlsProps {
   screenWidth: number;
   isLandscape: boolean;
   showTimeLabels?: boolean;
+  colors: readonly [ColorValue, ColorValue, ...ColorValue[]];
 }
 
 export const VideoBottomControls: React.FC<VideoBottomControlsProps> = ({
@@ -24,6 +25,7 @@ export const VideoBottomControls: React.FC<VideoBottomControlsProps> = ({
   screenWidth,
   isLandscape,
   showTimeLabels = true,
+  colors,
 }) => {
   const bottomControlsStyle = [
     styles.bottomControls,
@@ -41,6 +43,7 @@ export const VideoBottomControls: React.FC<VideoBottomControlsProps> = ({
         screenWidth={screenWidth}
         isFullscreen={isFullscreen}
         handleFullscreenPress={onFullscreenPress}
+        colors={colors}
       />
     </View>
   );

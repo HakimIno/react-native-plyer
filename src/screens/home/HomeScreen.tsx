@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Image,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +16,7 @@ import { RootStackParamList, VideoItem } from '../../types';
 import { useVideoPlayer, useVideoPlaylist } from '../../modules/video/hooks/useVideoPlayer';
 import { formatTime } from '../../modules/video/utility/helpers/timeUtils';
 import { getCachedVideoThumbnail } from '../../modules/video/utility/helpers/thumbnailUtils';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 
 
@@ -80,15 +82,14 @@ const HomeScreen = ({ navigation }: Props) => {
     navigation.navigate('Player');
   };
 
-  // Load video thumbnails automatically
   useEffect(() => {
     const loadThumbnailsForVideos = async () => {
       const videosNeedingThumbnails = videoList.filter(video => {
-        const shouldGenerateThumbnail = !video.thumbnail || 
-          video.thumbnail.includes('placeholder') || 
+        const shouldGenerateThumbnail = !video.thumbnail ||
+          video.thumbnail.includes('placeholder') ||
           video.thumbnail.includes('via.placeholder.com') ||
           video.thumbnail === '';
-        
+
         return shouldGenerateThumbnail && !thumbnailCache.has(video.id);
       });
 
@@ -99,7 +100,7 @@ const HomeScreen = ({ navigation }: Props) => {
             video.thumbnail,
             { time: 2000, quality: 0.7 }
           );
-          
+
           if (generatedThumbnail) {
             setThumbnailCache(prev => {
               const newCache = new Map(prev);
@@ -126,7 +127,7 @@ const HomeScreen = ({ navigation }: Props) => {
       <TouchableOpacity
         style={styles.videoCard}
         onPress={() => handlePlayVideo(item, index)}
-        activeOpacity={0.8} // Slightly less opaque feedback
+        activeOpacity={0.8}
       >
         <View style={styles.thumbnailContainer}>
           {currentThumbnail && !isGeneratingThumbnail ? (
@@ -144,7 +145,7 @@ const HomeScreen = ({ navigation }: Props) => {
             </View>
           )}
 
-          {/* Duration Badge */}
+
           {item.duration && (
             <View style={styles.durationBadge}>
               <Text style={styles.durationText}>
@@ -153,7 +154,7 @@ const HomeScreen = ({ navigation }: Props) => {
             </View>
           )}
 
-          {/* Play Icon Overlay */}
+
           <View style={styles.playOverlay}>
             <Ionicons name="play-circle" size={56} color="#fff" />
           </View>
@@ -174,12 +175,13 @@ const HomeScreen = ({ navigation }: Props) => {
     );
   };
 
+  const { top } = useSafeAreaInsets();
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f0f0f" />
 
-      {/* Header */}
-      <View style={styles.header}>
+
+      <View style={[styles.header, { marginTop: Platform.OS === 'ios' ? 0 : top }]}>
         <Text style={styles.headerTitle}>Video Player</Text>
         <TouchableOpacity
           style={styles.addButton}
@@ -195,7 +197,7 @@ const HomeScreen = ({ navigation }: Props) => {
 
 
 
-      {/* Video List */}
+
       <View style={styles.playlistSection}>
         <Text style={styles.sectionTitle}>
           My Playlist ({videoList.length} videos)
@@ -217,6 +219,7 @@ const HomeScreen = ({ navigation }: Props) => {
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContainer}
             numColumns={1}
+            overScrollMode="never"
           />
         )}
       </View>
@@ -235,7 +238,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 18, // Increased padding
     paddingVertical: 12, // Increased vertical padding
-   
+
   },
   headerTitle: {
     fontSize: 22, // Larger title
@@ -277,7 +280,7 @@ const styles = StyleSheet.create({
     borderRadius: 10, // More rounded corners
     marginBottom: 20,
     overflow: 'hidden',
-   
+
   },
   thumbnailContainer: {
     position: 'relative',
@@ -309,7 +312,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.8)', // Slightly less opaque
     paddingHorizontal: 8, // Slightly less padding
     paddingVertical: 4, // Slightly less padding
-    borderRadius:8, // Softer corners
+    borderRadius: 8, // Softer corners
   },
   durationText: {
     color: '#ffffff',

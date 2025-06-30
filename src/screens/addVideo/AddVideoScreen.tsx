@@ -19,6 +19,7 @@ import { RootStackParamList, VideoItem } from '../../types';
 import { useVideoPlaylist } from '../../modules/video/hooks/useVideoPlayer';
 import { isValidVideoUrl } from '../../modules/video/utility/helpers/networkUtils';
 import { getCachedVideoThumbnail } from '../../modules/video/utility/helpers/thumbnailUtils';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type AddVideoScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddVideo'>;
 
@@ -147,12 +148,14 @@ const AddVideoScreen = ({ navigation }: Props) => {
     }
   };
 
+  const { top } = useSafeAreaInsets();
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f0f0f" />
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { marginTop: Platform.OS === 'ios' ? 0 : top }]}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
