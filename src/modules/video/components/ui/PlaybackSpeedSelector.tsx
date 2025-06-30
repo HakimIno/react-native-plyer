@@ -40,7 +40,7 @@ const PlaybackSpeedSelector: React.FC<PlaybackSpeedSelectorProps> = ({
 
   return (
     <View style={[styles.container, isLandscape && styles.containerLandscape]}>
-      {/* Back button */}
+      
       <TouchableOpacity 
         style={[styles.backButton, isLandscape && styles.backButtonLandscape]}
         onPress={onBackPress}
@@ -49,7 +49,7 @@ const PlaybackSpeedSelector: React.FC<PlaybackSpeedSelectorProps> = ({
         <Text style={styles.backButtonText}>Playback Speed</Text>
       </TouchableOpacity>
 
-      {/* Speed options in horizontal layout */}
+      
       <View style={[styles.speedOptionsContainer, isLandscape && styles.speedOptionsContainerLandscape]}>
         {playbackSpeedOptions.map((option) => (
           <TouchableOpacity 
@@ -112,14 +112,14 @@ const styles = StyleSheet.create({
   speedOption: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 13,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'transparent',
     marginBottom: 12,
     width: '23%',
-    minHeight: 40,
+    minHeight: 35,
   },
   speedOptionLandscape: {
     paddingHorizontal: 14,

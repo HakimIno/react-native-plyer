@@ -29,7 +29,7 @@ export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
 
   const handlePress = () => {
     scale.value = withSequence(
-      withSpring(0.95, { duration: 80 }), // Slightly less aggressive spring
+      withSpring(0.95, { duration: 80 }), 
       withSpring(1, { duration: 80 })
     );
     onPress();

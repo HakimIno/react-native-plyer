@@ -62,7 +62,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const thumbScale = useSharedValue(1);
   const barHeight = useSharedValue(2.5);
   
-  // Derived value for seeking preview position to follow animated progress
   const seekingPreviewPosition = useDerivedValue(() => {
     return Math.min(currentScreenWidth - 100, Math.max(50, progress.value + 20));
   });
@@ -90,7 +89,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     }
   }, [currentTime, userSeekTime, isSeekingInProgress, isDragging]);
 
-  // Cleanup timeouts on unmount
   React.useEffect(() => {
     return () => {
       if (seekTimeoutRef.current) {
@@ -111,7 +109,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     setUserSeekTime(clampedTime);
     setDisplayTime(clampedTime);
 
-    // Add haptic feedback
     Vibration.vibrate(10);
 
     if (seekTimeoutRef.current) {
@@ -132,13 +129,11 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   const setSeekingPreview = (show: boolean) => {
     setShowSeekingPreview(show);
     
-    // Clear existing timeout
     if (previewTimeoutRef.current) {
       clearTimeout(previewTimeoutRef.current);
       previewTimeoutRef.current = null;
     }
     
-    // Set 3-second timeout to hide preview if showing
     if (show) {
       previewTimeoutRef.current = setTimeout(() => {
         setShowSeekingPreview(false);
@@ -163,7 +158,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
     thumbScale.value = withSpring(1.3, { damping: 15, stiffness: 200 });
     barHeight.value = withSpring(6, { damping: 15, stiffness: 200 });
     
-    // Auto-reset after 2 seconds if no onEnd is called
     barResetTimeoutRef.current = setTimeout(() => {
       resetBarToNormal();
     }, 2000);
@@ -179,7 +173,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       runOnJS(setBarToActive)();
       runOnJS(setHasActuallyDragged)(false);
       
-      // Don't set progress position in onBegin - wait for actual dragging
       if (duration > 0) {
         const seekTime = (Math.max(0, Math.min(progressWidth, event.x)) / progressWidth) * duration;
         runOnJS(updatePreviewTime)(seekTime);
@@ -208,7 +201,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       runOnJS(setSeekingPreview)(false);
       runOnJS(resetBarToNormal)();
 
-      // Only seek if user actually dragged
       if (hasActuallyDragged && duration > 0) {
         const finalProgress = progress.value;
         const seekTime = (finalProgress / progressWidth) * duration;
@@ -229,7 +221,6 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       runOnJS(setHasActuallyDragged)(false);
     });
 
-  // Only use pan gesture, no tap gesture
   const composedGesture = panGesture;
 
   const progressBarStyle = useAnimatedStyle(() => {
@@ -389,7 +380,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   visualTrack: {
-    height: 6, // Visual height of the progress bar
+    height: 6, 
     justifyContent: 'center',
     position: 'relative',
   },

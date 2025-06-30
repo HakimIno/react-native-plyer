@@ -30,7 +30,6 @@ export const SeekButtons: React.FC<SeekButtonsProps> = ({
     const backwardScale = useSharedValue(1);
     const forwardScale = useSharedValue(1);
     
-    // Refs for debouncing rapid taps
     const backwardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const forwardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const backwardCountRef = useRef(0);
@@ -44,12 +43,11 @@ export const SeekButtons: React.FC<SeekButtonsProps> = ({
         backwardCountRef.current += 1;
         
         backwardTimeoutRef.current = setTimeout(() => {
-            // Execute accumulated seeks
             for (let i = 0; i < backwardCountRef.current; i++) {
                 onSeekBackward();
             }
             backwardCountRef.current = 0;
-        }, 300); // Wait 300ms after last tap
+        }, 300); 
     }, [onSeekBackward]);
 
     const debouncedForward = useCallback(() => {
@@ -60,12 +58,11 @@ export const SeekButtons: React.FC<SeekButtonsProps> = ({
         forwardCountRef.current += 1;
         
         forwardTimeoutRef.current = setTimeout(() => {
-            // Execute accumulated seeks
             for (let i = 0; i < forwardCountRef.current; i++) {
                 onSeekForward();
             }
             forwardCountRef.current = 0;
-        }, 300); // Wait 300ms after last tap
+        }, 300); 
     }, [onSeekForward]);
 
     const handleBackwardPress = () => {
