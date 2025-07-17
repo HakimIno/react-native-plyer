@@ -248,7 +248,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         seekSeconds={seekSeconds}
         optionsButtonSize={optionsButtonSize}
         showTimeLabels={showTimeLabels}
-        colors={['#007AFF', '#007AFF', '#007AFF']}
+        colors={['#32CD32', '#ADFF2F', '#F0E68C']}
         isLive={videoState.isLive}
       />
 
