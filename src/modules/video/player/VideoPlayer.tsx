@@ -104,7 +104,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     seekBackward,
     seekForward,
     play,
-    getCurrentVideo,
   } = useVideoPlayer();
 
   const {
@@ -149,13 +148,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     }
   };
 
-  const handleSeekBackward = () => {
-    seekBackward(seekSeconds);
+  const handleSeekBackward = (seconds: number) => {
+    seekBackward(seconds || seekSeconds);
     showControlsHandler();
   };
 
-  const handleSeekForward = () => {
-    seekForward(seekSeconds);
+  const handleSeekForward = (seconds: number ) => {
+    seekForward(seconds || seekSeconds);
     showControlsHandler();
   };
 
@@ -250,6 +249,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         optionsButtonSize={optionsButtonSize}
         showTimeLabels={showTimeLabels}
         colors={['#007AFF', '#007AFF', '#007AFF']}
+        isLive={videoState.isLive}
       />
 
       <BottomSheet

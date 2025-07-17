@@ -16,7 +16,7 @@ export interface VideoState {
   // Current video
   currentVideoUrl: string;
   currentVideoTitle: string;
-
+  isLive: boolean;
   // Subtitle state
   selectedTextTrack: {
     type: 'system' | 'disabled' | 'index' | 'language' | 'title';
@@ -44,6 +44,7 @@ const initialState: VideoState = {
   // Current video
   currentVideoUrl: '',
   currentVideoTitle: '',
+  isLive: false,
 
   // Subtitle state
   selectedTextTrack: { type: 'index', value: 0 }, // Default to first subtitle track
@@ -108,9 +109,10 @@ const videoSlice = createSlice({
       state.availableTextTracks = action.payload;
     },
 
-    setCurrentVideo: (state, action: PayloadAction<{ url: string; title: string }>) => {
+    setCurrentVideo: (state, action: PayloadAction<{ url: string; title: string; isLive: boolean }>) => {
       state.currentVideoUrl = action.payload.url;
       state.currentVideoTitle = action.payload.title;
+      state.isLive = action.payload.isLive;
       // Reset playback state for new video
       state.currentTime = 0;
       state.duration = 0;

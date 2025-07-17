@@ -69,14 +69,14 @@ export const useVideoPlayer = () => {
     }
 
     const clampedTime = Math.max(0, Math.min(videoState.duration, time));
-    
+
     isUserSeeking.current = true;
     pendingSeekTime.current = clampedTime;
 
     dispatch(setSeekingInProgress(true));
-    
+
     dispatch(forceSetCurrentTime(clampedTime));
-    
+
     try {
       videoRef.current.seek(clampedTime);
     } catch (error) {
@@ -125,12 +125,13 @@ export const useVideoPlayer = () => {
     dispatch(resetVideoState());
     isUserSeeking.current = false;
     pendingSeekTime.current = null;
-    
-    dispatch(setCurrentVideo({ 
-      url: video.url, 
-      title: video.title 
+
+    dispatch(setCurrentVideo({
+      url: video.url,
+      title: video.title,
+      isLive: video.isLive || false,
     }));
-    
+
     if (index !== undefined) {
       dispatch(setCurrentVideoIndex(index));
     }
@@ -140,16 +141,17 @@ export const useVideoPlayer = () => {
     dispatch(resetVideoState());
     isUserSeeking.current = false;
     pendingSeekTime.current = null;
-    
-    dispatch(setCurrentVideo({ 
-      url: video.url, 
-      title: video.title 
+
+    dispatch(setCurrentVideo({
+      url: video.url,
+      title: video.title,
+      isLive: video.isLive || false,
     }));
-    
+
     if (video.textTracks) {
       dispatch(setAvailableTextTracks(video.textTracks));
     }
-    
+
     if (index !== undefined) {
       dispatch(setCurrentVideoIndex(index));
     }
@@ -175,7 +177,7 @@ export const useVideoPlayer = () => {
     if (data.duration && data.duration > 0) {
       dispatch(setDuration(data.duration));
     }
-    
+
     dispatch(setBuffering(false));
     dispatch(setSeekingInProgress(false));
     isUserSeeking.current = false;
@@ -199,11 +201,11 @@ export const useVideoPlayer = () => {
 
   const handleSeek = (data: { currentTime: number; seekTime: number }) => {
     dispatch(setSeekingInProgress(false));
-    
+
     if (data.currentTime !== undefined) {
       dispatch(setCurrentTime(data.currentTime));
     }
-    
+
     isUserSeeking.current = false;
     pendingSeekTime.current = null;
   };
@@ -217,9 +219,9 @@ export const useVideoPlayer = () => {
 
   return {
     videoState,
-    
+
     setVideoRef,
-    
+
     // Playback controls
     play,
     pause,
@@ -232,13 +234,13 @@ export const useVideoPlayer = () => {
     toggleMute: mute,
     toggleFullscreen: enterFullscreen,
     changePlaybackRate,
-    
+
     // Video management
     loadVideo,
     setCurrentVideo: setCurrentVideoFn,
     getCurrentVideo,
     reset,
-    
+
     // Event handlers
     handleProgress,
     handleLoad,
@@ -287,7 +289,7 @@ export const useVideoPlaylist = () => {
       const nextIndex = currentVideoIndex + 1;
       const nextVid = videoList[nextIndex];
       if (nextVid) {
-        dispatch(setCurrentVideo({ url: nextVid.url, title: nextVid.title }));
+        dispatch(setCurrentVideo({ url: nextVid.url, title: nextVid.title, isLive: nextVid.isLive || false }));
         dispatch(setCurrentVideoIndex(nextIndex));
       }
     }
@@ -298,7 +300,7 @@ export const useVideoPlaylist = () => {
       const prevIndex = currentVideoIndex - 1;
       const prevVid = videoList[prevIndex];
       if (prevVid) {
-        dispatch(setCurrentVideo({ url: prevVid.url, title: prevVid.title }));
+        dispatch(setCurrentVideo({ url: prevVid.url, title: prevVid.title, isLive: prevVid.isLive || false }));
         dispatch(setCurrentVideoIndex(prevIndex));
       }
     }

@@ -11,6 +11,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { FullscreenButton } from './FullscreenButton';
 import { formatTime } from '../../utility/helpers/timeUtils';
+import LiveIndicator from './LiveIndicator';
 
 interface ProgressBarProps {
   currentTime: number;
@@ -22,6 +23,7 @@ interface ProgressBarProps {
   isFullscreen: boolean;
   handleFullscreenPress: () => void;
   colors: readonly [ColorValue, ColorValue, ...ColorValue[]];
+  isLive: boolean;
 }
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
@@ -34,6 +36,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   isFullscreen,
   handleFullscreenPress,
   colors,
+  isLive,
 }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showSeekingPreview, setShowSeekingPreview] = useState(false);
@@ -252,11 +255,20 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
   return (
     <View style={styles.container}>
-      {showTimeLabels && (
+
+      {(showTimeLabels || isLive) && (
         <View style={styles.timeContainer}>
-          <Text style={styles.timeText}>
-            {formatTime(displayTime)}  /  {formatTime(duration)}
-          </Text>
+          {isLive ? (
+            <LiveIndicator
+              isLive={isLive}
+              viewerCount={139000}
+            />
+          ) : (
+            <Text style={styles.timeText}>
+              {formatTime(displayTime)}  /  {formatTime(duration)}
+            </Text>
+          )}
+
           <FullscreenButton
             isFullscreen={isFullscreen}
             onPress={handleFullscreenPress}
@@ -266,7 +278,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
       )}
 
       {/* Seeking Preview */}
-      {showSeekingPreview && (
+      {isLive || showSeekingPreview && (
         <Animated.View style={[styles.seekingPreview, seekingPreviewStyle]}>
           <Text style={styles.seekingText}>
             {formatTime(previewTimeValue)}
@@ -274,6 +286,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
         </Animated.View>
       )}
 
+     {!isLive && (
       <View style={styles.progressContainer} pointerEvents="box-only">
         <GestureDetector gesture={composedGesture}>
           <View style={[styles.progressTrack, { width: progressWidth }]}>
@@ -301,19 +314,19 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           </View>
         </GestureDetector>
       </View>
+     )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 0,
+    paddingBottom: 5,
   },
   timeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 0,
     paddingHorizontal: 20,
   },
   timeText: {
@@ -354,7 +367,6 @@ const styles = StyleSheet.create({
   },
   progressContainer: {
     paddingHorizontal: 20,
-    paddingVertical: 5,
   },
   progressTrack: {
     justifyContent: 'center',

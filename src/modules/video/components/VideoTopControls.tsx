@@ -18,7 +18,7 @@ export const VideoTopControls: React.FC<VideoTopControlsProps> = ({
 }) => {
   const topControlsStyle = [
     styles.topControls,
-    { top: safeAreaTop + 20, right: 20 },
+    { top: safeAreaTop + 15, right: 20 },
   ];
 
   return (
@@ -26,7 +26,7 @@ export const VideoTopControls: React.FC<VideoTopControlsProps> = ({
       <OptionsButton
         isOptions={true}
         onPress={onOptionsPress}
-        size={optionsButtonSize}
+        size={32}
         color={optionsButtonColor}
       />
     </View>

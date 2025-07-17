@@ -40,6 +40,7 @@ const HomeScreen = ({ navigation }: Props) => {
       thumbnail: '', // No thumbnail - will auto-generate
       duration: 661,
       isLocal: false,
+      isLive: false,
     },
     {
       id: '2',
@@ -48,6 +49,7 @@ const HomeScreen = ({ navigation }: Props) => {
       thumbnail: '',
       duration: 596,
       isLocal: false,
+      isLive: false,
     },
     {
       id: '3',
@@ -56,7 +58,7 @@ const HomeScreen = ({ navigation }: Props) => {
       thumbnail: '', // No thumbnail - will auto-generate
       duration: 214,
       isLocal: false,
-      
+      isLive: false,
     },
     {
       id: '4',
@@ -65,6 +67,7 @@ const HomeScreen = ({ navigation }: Props) => {
       thumbnail: '',
       duration: 629,
       isLocal: false,
+      isLive: false,
       textTracks: [
         {
           src: "https://files.vidstack.io/sprite-fight/subs/english.vtt",
@@ -91,6 +94,14 @@ const HomeScreen = ({ navigation }: Props) => {
         }
       ]
     },
+    {
+      id: '5',
+      title: 'Cartoon Network',
+      url: 'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8',
+      thumbnail: '',
+      isLocal: false,
+      isLive: true,
+    },
   ];
 
   useEffect(() => {
@@ -98,8 +109,6 @@ const HomeScreen = ({ navigation }: Props) => {
       sampleVideos.forEach(video => addToPlaylist(video));
     }
   }, []);
-
-
 
 
 

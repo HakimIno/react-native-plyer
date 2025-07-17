@@ -1,14 +1,12 @@
-import React from 'react';
-import { TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useEffect } from 'react'; // 👈 [1] Import useEffect
+import { TouchableOpacity, StyleSheet, View, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withSequence,
+  withTiming, // 👈 [2] Import withTiming สำหรับ Cross-fade
 } from 'react-native-reanimated';
-
-const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface PlayPauseButtonProps {
   isPlaying: boolean;
@@ -16,61 +14,97 @@ interface PlayPauseButtonProps {
   size?: number;
   color?: string;
   backgroundColor?: string;
+  isLoading?: boolean;
 }
 
 export const PlayPauseButton: React.FC<PlayPauseButtonProps> = ({
   isPlaying,
   onPress,
-  size = 60, 
+  size = 60,
   color = '#fff',
-  backgroundColor = 'rgba(0, 0, 0, 0.3)', 
+  backgroundColor = 'rgba(0, 0, 0, 0.3)',
+  isLoading = false,
 }) => {
   const scale = useSharedValue(1);
+  const iconAnimation = useSharedValue(isPlaying ? 1 : 0);
 
-  const handlePress = () => {
-    scale.value = withSequence(
-      withSpring(0.95, { duration: 80 }), 
-      withSpring(1, { duration: 80 })
-    );
-    onPress();
-  };
+  useEffect(() => {
+    iconAnimation.value = withTiming(isPlaying ? 1 : 0, {
+      duration: 250,
+    });
+  }, [isPlaying]);
 
-  const animatedStyle = useAnimatedStyle(() => {
+  const animatedContainerStyle = useAnimatedStyle(() => {
     return {
-      transform: [{ scale: scale.get() }],
+      transform: [{ scale: scale.value }],
     };
   });
 
-  const iconName = isPlaying ? 'pause' : 'play';
-  const iconSize = size * 0.5; 
+  const animatedPlayIconStyle = useAnimatedStyle(() => {
+    return {
+      opacity: 1 - iconAnimation.value,
+      transform: [{ scale: 1 - iconAnimation.value }],
+    };
+  });
+
+  const animatedPauseIconStyle = useAnimatedStyle(() => {
+    return {
+      opacity: iconAnimation.value,
+      transform: [{ scale: iconAnimation.value }],
+    };
+  });
+
+  const handlePressIn = () => {
+    scale.value = withSpring(0.9, { damping: 15, stiffness: 400 });
+  };
+  const handlePressOut = () => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  };
+
+  const iconSize = size * 0.5;
 
   return (
-    <AnimatedTouchableOpacity
-      style={[
-        styles.button,
-        {
-          width: size - 5,
-          height: size - 5,
-          borderRadius: size / 2,
-          backgroundColor: backgroundColor,
+    <Animated.View style={animatedContainerStyle}>
+      {isLoading ? (
+        <ActivityIndicator size={size / 1.1} color="#fff" />
+      ) : (
+        <TouchableOpacity
+          style={[
+            styles.button,
+            {
+              width: size / 1.1,
+              height: size / 1.1,
+              borderRadius: size / 2,
+              backgroundColor: backgroundColor,
+            },
+          ]}
+          onPress={onPress}
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+          activeOpacity={0.8}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <View style={styles.iconContainer}>
+            <Animated.View style={[{ position: 'absolute' }, animatedPlayIconStyle]}>
+              <Ionicons
+                name="play"
+                size={iconSize}
+                color={color}
+                style={{ marginLeft: size * 0.05 }}
+              />
+            </Animated.View>
 
-        },
-        animatedStyle,
-      ]}
-      onPress={handlePress}
-      activeOpacity={0.7}
-      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} 
-    >
-      <Ionicons
-        name={iconName}
-        size={iconSize}
-        color={color}
-        style={[
-          styles.icon,
-          !isPlaying && { marginLeft: size * 0.05 }, 
-        ]}
-      />
-    </AnimatedTouchableOpacity>
+            <Animated.View style={[{ position: 'absolute' }, animatedPauseIconStyle]}>
+              <Ionicons
+                name="pause"
+                size={iconSize}
+                color={color}
+              />
+            </Animated.View>
+          </View>
+        </TouchableOpacity>
+      )}
+    </Animated.View>
   );
 };
 
@@ -78,8 +112,10 @@ const styles = StyleSheet.create({
   button: {
     justifyContent: 'center',
     alignItems: 'center',
+
   },
-  icon: {
-    textAlign: 'center',
+  iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

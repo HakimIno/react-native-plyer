@@ -9,6 +9,7 @@ export interface VideoState {
   playbackRate: number;
   currentVideoUrl?: string;
   currentVideoTitle?: string;
+
 }
 
 export interface TextTrack {
@@ -28,6 +29,7 @@ export interface VideoItem {
   duration?: number;
   isLocal: boolean;
   textTracks?: TextTrack[];
+  isLive?: boolean;
 }
 
 

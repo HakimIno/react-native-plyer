@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ColorValue } from 'react-native';
-import { ProgressBar } from './ui/ProgressBar';
+import { ProgressBar } from './ui';
 
 interface VideoBottomControlsProps {
   currentTime: number;
@@ -13,6 +13,7 @@ interface VideoBottomControlsProps {
   isLandscape: boolean;
   showTimeLabels?: boolean;
   colors: readonly [ColorValue, ColorValue, ...ColorValue[]];
+  isLive: boolean;
 }
 
 export const VideoBottomControls: React.FC<VideoBottomControlsProps> = ({
@@ -26,6 +27,7 @@ export const VideoBottomControls: React.FC<VideoBottomControlsProps> = ({
   isLandscape,
   showTimeLabels = true,
   colors,
+  isLive,
 }) => {
   const bottomControlsStyle = [
     styles.bottomControls,
@@ -44,6 +46,7 @@ export const VideoBottomControls: React.FC<VideoBottomControlsProps> = ({
         isFullscreen={isFullscreen}
         handleFullscreenPress={onFullscreenPress}
         colors={colors}
+        isLive={isLive}
       />
     </View>
   );
@@ -54,6 +57,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   bottomControlsLandscape: {
-    paddingBottom: 10,
+    paddingBottom: 15,
   },
 }); 

@@ -1,18 +1,20 @@
-import React, { useRef, useCallback } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons } from '@expo/vector-icons';
 import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withSpring,
-    withSequence
+    withSequence,
+    withTiming,
+    withDelay,
 } from 'react-native-reanimated';
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface SeekButtonsProps {
-    onSeekBackward: () => void;
-    onSeekForward: () => void;
+    onSeekBackward?: (seconds: number) => void;
+    onSeekForward?: (seconds: number) => void;
     size?: number;
     color?: string;
     seekSeconds?: number;
@@ -21,141 +23,122 @@ interface SeekButtonsProps {
 
 export const SeekButtons: React.FC<SeekButtonsProps> = ({
     onSeekBackward,
-    onSeekForward,
-    size = 45,
+    onSeekForward = () => {},
+    size = 50,
     color = '#fff',
     seekSeconds = 10,
     type = 'backward',
 }) => {
-    const backwardScale = useSharedValue(1);
-    const forwardScale = useSharedValue(1);
-    
     const backwardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-    const forwardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const backwardCountRef = useRef(0);
+    const [backwardDisplay, setBackwardDisplay] = useState(0);
+
+    const forwardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const forwardCountRef = useRef(0);
+    const [forwardDisplay, setForwardDisplay] = useState(0);
 
-    const debouncedBackward = useCallback(() => {
-        if (backwardTimeoutRef.current) {
-            clearTimeout(backwardTimeoutRef.current);
-        }
-        
-        backwardCountRef.current += 1;
-        
-        backwardTimeoutRef.current = setTimeout(() => {
-            for (let i = 0; i < backwardCountRef.current; i++) {
-                onSeekBackward();
-            }
-            backwardCountRef.current = 0;
-        }, 300); 
-    }, [onSeekBackward]);
+    const backwardScale = useSharedValue(1);
+    const backwardTextOpacity = useSharedValue(0);
+    const backwardTextTranslateY = useSharedValue(0);
 
-    const debouncedForward = useCallback(() => {
-        if (forwardTimeoutRef.current) {
-            clearTimeout(forwardTimeoutRef.current);
+    const forwardScale = useSharedValue(1);
+    const forwardTextOpacity = useSharedValue(0);
+    const forwardTextTranslateY = useSharedValue(0);
+
+    const debouncedSeek = useCallback((event: 'backward' | 'forward') => {
+        const isBackward = event === 'backward';
+        const timeoutRef = isBackward ? backwardTimeoutRef : forwardTimeoutRef;
+        const countRef = isBackward ? backwardCountRef : forwardCountRef;
+        const setDisplay = isBackward ? setBackwardDisplay : setForwardDisplay;
+        const textOpacity = isBackward ? backwardTextOpacity : forwardTextOpacity;
+        const textTranslateY = isBackward ? backwardTextTranslateY : forwardTextTranslateY;
+        const onSeek = isBackward ? onSeekBackward : onSeekForward;
+        if (!onSeek) return;
+
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
         }
-        
-        forwardCountRef.current += 1;
-        
-        forwardTimeoutRef.current = setTimeout(() => {
-            for (let i = 0; i < forwardCountRef.current; i++) {
-                onSeekForward();
-            }
-            forwardCountRef.current = 0;
-        }, 300); 
-    }, [onSeekForward]);
+
+        countRef.current += 1;
+        const totalSeek = countRef.current * seekSeconds;
+        setDisplay(totalSeek);
+
+        textOpacity.value = 1;
+        textTranslateY.value = withSpring(-20, { damping: 15, stiffness: 200 });
+
+        timeoutRef.current = setTimeout(() => {
+            onSeek(totalSeek);
+            countRef.current = 0;
+
+            textOpacity.value = withTiming(0, { duration: 300 });
+            textTranslateY.value = withDelay(300, withTiming(0, { duration: 1 }));
+        }, 500);
+    }, [onSeekBackward, onSeekForward, seekSeconds]);
 
     const handleBackwardPress = () => {
         backwardScale.value = withSequence(
-            withSpring(0.85, { duration: 80 }),
-            withSpring(1, { duration: 80 })
+            withSpring(0.85, { damping: 15, stiffness: 400 }),
+            withSpring(1, { damping: 15, stiffness: 400 })
         );
-        debouncedBackward();
+        debouncedSeek('backward');
     };
 
     const handleForwardPress = () => {
         forwardScale.value = withSequence(
-            withSpring(0.85, { duration: 80 }),
-            withSpring(1, { duration: 80 })
+            withSpring(0.85, { damping: 15, stiffness: 400 }),
+            withSpring(1, { damping: 15, stiffness: 400 })
         );
-        debouncedForward();
+        debouncedSeek('forward');
     };
 
-    const backwardAnimatedStyle = useAnimatedStyle(() => {
-        return {
-            transform: [{ scale: backwardScale.get() }],
-        };
-    });
+    const backwardAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: backwardScale.value }],
+    }));
+    const backwardTextAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: backwardTextOpacity.value,
+        transform: [{ translateY: backwardTextTranslateY.value }],
+    }));
 
-    const forwardAnimatedStyle = useAnimatedStyle(() => {
-        return {
-            transform: [{ scale: forwardScale.get() }],
-        };
-    });
+    const forwardAnimatedStyle = useAnimatedStyle(() => ({
+        transform: [{ scale: forwardScale.value }],
+    }));
+    const forwardTextAnimatedStyle = useAnimatedStyle(() => ({
+        opacity: forwardTextOpacity.value,
+        transform: [{ translateY: forwardTextTranslateY.value }],
+    }));
 
     return (
         <View style={styles.container}>
             {/* Backward Button */}
-            {type === 'backward' ? (
-                <AnimatedTouchableOpacity
-                    style={[
-                        styles.button,
-                        {
-                            width: size,
-                            height: size,
-                            borderRadius: size / 2,
-                        },
-                        backwardAnimatedStyle,
-                    ]}
-                    onPress={handleBackwardPress}
-                    activeOpacity={0.7}
-                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                >
-                    <View style={styles.iconContainer}>
-                        {/* <Ionicons
-                            name="play-skip-back"
-                            size={size * 0.4}
-                            color={color}
-                            style={styles.icon}
-                        /> */}
-                        <MaterialIcons name="replay-10" size={size * 0.5} color={color} style={styles.icon} />
-                    </View>
-                </AnimatedTouchableOpacity>
-            ) : (
-                <View style={styles.button} />
+            {type === 'backward' && (
+                <View style={[styles.buttonContainer, { right: 120}]}>
+                    <Animated.View style={[styles.textContainer, backwardTextAnimatedStyle]}>
+                        <Text style={[styles.secondsText, { color }]}>-{backwardDisplay}s</Text>
+                    </Animated.View>
+                    <AnimatedTouchableOpacity
+                        style={[styles.button, { width: size, height: size, borderRadius: size / 2 }, backwardAnimatedStyle]}
+                        onPress={handleBackwardPress}
+                        activeOpacity={0.8}
+                    >
+                        <MaterialIcons name="replay-10" size={size * 0.6} color={color} />
+                    </AnimatedTouchableOpacity>
+                </View>
             )}
 
             {/* Forward Button */}
-            {type === 'forward' ? (
-                <AnimatedTouchableOpacity
-                    style={[
-                        styles.button,
-                        {
-                            width: size,
-                            height: size,
-                            borderRadius: size / 2,
-                        },
-                        forwardAnimatedStyle,
-                    ]}
-                    onPress={handleForwardPress}
-                    activeOpacity={0.7}
-                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                >
-                    <View style={styles.iconContainer}>
-                        {/* <Ionicons
-                            name="play-skip-forward"
-                            size={size * 0.4}
-                            color={color}
-                            style={styles.icon}
-                        /> */}
-                        <MaterialIcons name="forward-10" size={size * 0.5} color={color} style={styles.icon} />
-                        {/* <Text style={[styles.secondsText, { color, fontSize: size * 0.2 }]}>
-                            {seekSeconds}
-                        </Text> */}
-                    </View>
-                </AnimatedTouchableOpacity>
-            ) : (
-                <View style={styles.button} />
+            {type === 'forward' && (
+                <View style={[styles.buttonContainer, { left: 120 }]}>
+                    <Animated.View style={[styles.textContainer, forwardTextAnimatedStyle]}>
+                        <Text style={[styles.secondsText, { color }]}>+{forwardDisplay}s</Text>
+                    </Animated.View>
+                    <AnimatedTouchableOpacity
+                        style={[styles.button, { width: size, height: size, borderRadius: size / 2 }, forwardAnimatedStyle]}
+                        onPress={handleForwardPress}
+                        activeOpacity={0.8}
+                    >
+                        <MaterialIcons name="forward-10" size={size * 0.6} color={color} />
+                    </AnimatedTouchableOpacity>
+                </View>
             )}
         </View>
     );
@@ -163,32 +146,35 @@ export const SeekButtons: React.FC<SeekButtonsProps> = ({
 
 const styles = StyleSheet.create({
     container: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-around',
+        paddingHorizontal: '15%',
+    },
+    buttonContainer: {
+        alignItems: 'center',
         justifyContent: 'center',
-        gap: 25,
     },
     button: {
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+        backgroundColor: 'rgba(0, 0, 0, 0.35)',
         justifyContent: 'center',
         alignItems: 'center',
     },
-    iconContainer: {
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    icon: {
-        textAlign: 'center',
-        textShadowColor: 'rgba(0, 0, 0, 0.7)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
+    textContainer: {
+        position: 'absolute',
+        alignSelf: 'center',
+        bottom: 40,
     },
     secondsText: {
+        fontSize: 16,
         fontWeight: 'bold',
-        textAlign: 'center',
-        marginTop: -2,
         textShadowColor: 'rgba(0, 0, 0, 0.7)',
         textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 2,
+        textShadowRadius: 3,
     },
-}); 
+});

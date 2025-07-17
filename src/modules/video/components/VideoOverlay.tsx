@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ColorValue } from 'react-native';
+import { View, StyleSheet, ColorValue, TouchableWithoutFeedback } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { SharedValue } from 'react-native-reanimated';
 import { VideoControls } from './VideoControls';
@@ -10,7 +10,7 @@ interface VideoOverlayProps {
   // Controls visibility
   showControls: boolean;
   controlsOpacity: SharedValue<number>;
-  
+  onVideoPress: () => void;
   // Video state
   isPlaying: boolean;
   isSeekingInProgress: boolean;
@@ -18,20 +18,20 @@ interface VideoOverlayProps {
   currentTime: number;
   duration: number;
   isFullscreen: boolean;
-  
+
   // Screen info
   screenWidth: number;
   isLandscape: boolean;
   safeAreaTop: number;
-  
+
   // Event handlers
   onPlayPause: () => void;
-  onSeekBackward: () => void;
-  onSeekForward: () => void;
+  onSeekBackward: (seconds: number) => void;
+  onSeekForward: (seconds: number) => void;
   onSeek: (time: number) => void;
   onFullscreenPress: () => void;
   onOptionsPress: () => void;
-  
+
   // Customization props
   playButtonSize?: number;
   seekButtonSize?: number;
@@ -40,10 +40,12 @@ interface VideoOverlayProps {
   showTimeLabels?: boolean;
 
   colors: readonly [ColorValue, ColorValue, ...ColorValue[]];
+  isLive: boolean;
 }
 
 export const VideoOverlay: React.FC<VideoOverlayProps> = ({
   showControls,
+  onVideoPress,
   controlsOpacity,
   isPlaying,
   isSeekingInProgress,
@@ -66,6 +68,7 @@ export const VideoOverlay: React.FC<VideoOverlayProps> = ({
   optionsButtonSize = 25,
   showTimeLabels = true,
   colors,
+  isLive,
 }) => {
   const controlsStyle = useAnimatedStyle(() => {
     return {
@@ -73,55 +76,54 @@ export const VideoOverlay: React.FC<VideoOverlayProps> = ({
     };
   });
 
+
   return (
-    <Animated.View 
-      style={[styles.controlsOverlay, controlsStyle]} 
-      pointerEvents={showControls ? 'auto' : 'none'}
-    >
-      {/* Center Controls */}
-      <VideoControls
-        isPlaying={isPlaying}
-        isSeekingInProgress={isSeekingInProgress}
-        isBuffering={isBuffering}
-        onPlayPause={onPlayPause}
-        onSeekBackward={onSeekBackward}
-        onSeekForward={onSeekForward}
-        playButtonSize={playButtonSize}
-        seekButtonSize={seekButtonSize}
-        seekSeconds={seekSeconds}
-      />
+    <TouchableWithoutFeedback onPress={onVideoPress}>
+      <Animated.View
+        style={[styles.controlsOverlay, controlsStyle]}
+        pointerEvents={showControls ? 'auto' : 'box-none'}
+      >
+        {/* Center Controls */}
+        <VideoControls
+          isPlaying={isPlaying}
+          isSeekingInProgress={isSeekingInProgress}
+          isBuffering={isBuffering}
+          onPlayPause={onPlayPause}
+          onSeekBackward={onSeekBackward}
+          onSeekForward={onSeekForward}
+          playButtonSize={playButtonSize}
+          seekButtonSize={seekButtonSize}
+          seekSeconds={seekSeconds}
+          isLive={isLive}
+        />
 
-      {/* Top Controls */}
-      <VideoTopControls
-        onOptionsPress={onOptionsPress}
-        safeAreaTop={safeAreaTop}
-        isLandscape={isLandscape}
-        optionsButtonSize={optionsButtonSize}
-      />
+        {/* Top Controls */}
+        <VideoTopControls
+          onOptionsPress={onOptionsPress}
+          safeAreaTop={safeAreaTop}
+          isLandscape={isLandscape}
+          optionsButtonSize={optionsButtonSize}
+        />
 
-      {/* Bottom Controls */}
-      <VideoBottomControls
-        currentTime={currentTime}
-        duration={duration}
-        onSeek={onSeek}
-        isSeekingInProgress={isSeekingInProgress}
-        isFullscreen={isFullscreen}
-        onFullscreenPress={onFullscreenPress}
-        screenWidth={screenWidth}
-        isLandscape={isLandscape}
-        showTimeLabels={showTimeLabels}
-        colors={colors}
-      />
+        {/* Bottom Controls */}
+        <VideoBottomControls
+          currentTime={currentTime}
+          duration={duration}
+          onSeek={onSeek}
+          isSeekingInProgress={isSeekingInProgress}
+          isFullscreen={isFullscreen}
+          onFullscreenPress={onFullscreenPress}
+          screenWidth={screenWidth}
+          isLandscape={isLandscape}
+          showTimeLabels={showTimeLabels}
+          colors={colors}
+          isLive={isLive}
+        />
 
-      {/* Subtitle Overlay */}
-      {/* <SubtitleOverlay 
-        currentTime={currentTime}
-        isVisible={true} // Always show subtitles
-      /> */}
-
-      {/* Gradient Overlay */}
-      <View style={styles.bottomGradient} />
-    </Animated.View>
+        {/* Gradient Overlay */}
+        <View style={styles.bottomGradient} />
+      </Animated.View>
+    </TouchableWithoutFeedback>
   );
 };
 

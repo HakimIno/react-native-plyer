@@ -1,16 +1,19 @@
-import React from 'react';
-import { View, StyleSheet, TouchableWithoutFeedback, StatusBar, ColorValue } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, StyleSheet, StatusBar, ColorValue, TouchableWithoutFeedback } from 'react-native';
 import Video from 'react-native-video';
+import { Gesture, GestureDetector, PinchGestureHandler, PinchGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import Animated, {
+  useAnimatedGestureHandler,
+  useAnimatedStyle,
+  useSharedValue,
+} from 'react-native-reanimated';
 import { VideoOverlay } from './VideoOverlay';
-import { SharedValue } from 'react-native-reanimated';
 import { TextTrack } from '../../../types';
+import { SharedValue } from 'react-native-reanimated';
 
 interface VideoContainerProps {
-  // Video source and ref
   videoUrl: string;
   setVideoRef: (ref: any) => void;
-  
-  // Video state
   isPlaying: boolean;
   isSeekingInProgress: boolean;
   isBuffering: boolean;
@@ -20,24 +23,16 @@ interface VideoContainerProps {
   isMuted: boolean;
   playbackRate: number;
   isFullscreen: boolean;
-
-  // Subtitle state
   textTracks?: TextTrack[];
   selectedTextTrack?: {
     type: 'system' | 'disabled' | 'index' | 'language' | 'title';
     value?: string | number;
   };
-  
-  // Screen info
   screenWidth: number;
   isLandscape: boolean;
   safeAreaTop: number;
-  
-  // Controls
   showControls: boolean;
   controlsOpacity: SharedValue<number>;
-  
-  // Event handlers
   onVideoPress: () => void;
   onProgress: (data: any) => void;
   onLoad: (data: any) => void;
@@ -47,23 +42,20 @@ interface VideoContainerProps {
   onSeek: (data: any) => void;
   onTextTracks?: (data: any) => void;
   onPlayPause: () => void;
-  onSeekBackward: () => void;
-  onSeekForward: () => void;
+  onSeekBackward: (seconds: number) => void;
+  onSeekForward: (seconds: number) => void;
   onSeekTo: (time: number) => void;
   onFullscreenPress: () => void;
   onOptionsPress: () => void;
-  
-  // Style props
   style?: any;
   resizeMode?: 'contain' | 'cover' | 'stretch';
-  
-  // Customization props
   playButtonSize?: number;
   seekButtonSize?: number;
   seekSeconds?: number;
   optionsButtonSize?: number;
   showTimeLabels?: boolean;
   colors: readonly [ColorValue, ColorValue, ...ColorValue[]];
+  isLive: boolean;
 }
 
 export const VideoContainer: React.FC<VideoContainerProps> = ({
@@ -107,114 +99,176 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
   optionsButtonSize = 25,
   showTimeLabels = true,
   colors,
+  isLive,
 }) => {
-  const formattedTextTracks = textTracks.map(track => ({
+  const [videoDimensions, setVideoDimensions] = useState({ width: 1, height: 1 });
+  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+
+  const scale = useSharedValue(1);
+  const savedScale = useSharedValue(1);
+
+  const maxScale = useMemo(() => {
+    if (videoDimensions.height === 1 || containerDimensions.height === 0) {
+      return 1;
+    }
+    const videoAspectRatio = videoDimensions.width / videoDimensions.height;
+    const containerAspectRatio = containerDimensions.width / containerDimensions.height;
+
+    if (videoAspectRatio > containerAspectRatio) {
+      return videoAspectRatio / containerAspectRatio;
+    }
+    else {
+      return containerAspectRatio / videoAspectRatio;
+    }
+  }, [videoDimensions, containerDimensions]);
+
+  const pinchGesture = Gesture.Pinch()
+    .onStart(() => {
+      savedScale.value = scale.value;
+    })
+    .onUpdate((event) => {
+      const newScale = savedScale.value * event.scale;
+      scale.value = Math.max(1, Math.min(newScale, maxScale));
+    })
+    .onEnd(() => {
+      savedScale.value = scale.value;
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const formattedTextTracks = textTracks.map((track) => ({
     title: track.label,
     language: track.language.substring(0, 2).toLowerCase() as any,
     type: 'text/vtt' as any,
     uri: track.src,
   }));
 
-  const formattedSelectedTextTrack = selectedTextTrack ? (() => {
-    switch (selectedTextTrack.type) {
-      case 'disabled':
-        return { type: 'disabled' as any };
-      case 'index':
-        const index = selectedTextTrack.value as number;
-        if (index >= 0 && index < formattedTextTracks.length) {
-          return { type: 'index' as any, value: index };
-        }
-        return { type: 'disabled' as any };
-      case 'language':
-        return { type: 'language' as any, value: selectedTextTrack.value };
-      case 'title':
-        return { type: 'title' as any, value: selectedTextTrack.value };
-      case 'system':
-      default:
-        const defaultTrack = formattedTextTracks.findIndex(track => 
-          textTracks.find(original => original.src === track.uri)?.default
-        );
-        if (defaultTrack >= 0) {
-          return { type: 'index' as any, value: defaultTrack };
-        }
-        return formattedTextTracks.length > 0 
-          ? { type: 'index' as any, value: 0 }
-          : { type: 'disabled' as any };
-    }
-  })() : formattedTextTracks.length > 0 
-    ? { type: 'index' as any, value: 0 }
-    : { type: 'disabled' as any };
-
+  const formattedSelectedTextTrack = selectedTextTrack
+    ? (() => {
+      switch (selectedTextTrack.type) {
+        case 'disabled':
+          return { type: 'disabled' as any };
+        case 'index':
+          const index = selectedTextTrack.value as number;
+          if (index >= 0 && index < formattedTextTracks.length) {
+            return { type: 'index' as any, value: index };
+          }
+          return { type: 'disabled' as any };
+        case 'language':
+          return { type: 'language' as any, value: selectedTextTrack.value };
+        case 'title':
+          return { type: 'title' as any, value: selectedTextTrack.value };
+        case 'system':
+        default:
+          const defaultTrack = formattedTextTracks.findIndex((track) =>
+            textTracks.find((original) => original.src === track.uri)?.default
+          );
+          if (defaultTrack >= 0) {
+            return { type: 'index' as any, value: defaultTrack };
+          }
+          return formattedTextTracks.length > 0
+            ? { type: 'index' as any, value: 0 }
+            : { type: 'disabled' as any };
+      }
+    })()
+    : formattedTextTracks.length > 0
+      ? { type: 'index' as any, value: 0 }
+      : { type: 'disabled' as any };
 
   const containerStyle = [
     styles.container,
     isFullscreen && styles.fullscreenContainer,
-    style
+    style,
   ];
 
+  const handleLayout = (event: any) => {
+    const { width, height } = event.nativeEvent.layout;
+    setContainerDimensions({ width, height });
+  };
+
+  const handleLoad = (data: any) => {
+    setVideoDimensions({
+      width: data.naturalSize.width,
+      height: data.naturalSize.height,
+    });
+    onLoad(data);
+  };
+
   return (
-    <View style={containerStyle}>
+    <View style={containerStyle} onLayout={handleLayout}>
       <StatusBar hidden={isFullscreen} />
 
-      <TouchableWithoutFeedback onPress={onVideoPress}>
-        <View style={styles.videoContainer}>
-          <Video
-            ref={setVideoRef}
-            source={{ uri: videoUrl }}
-            style={styles.video}
-            onProgress={onProgress}
-            onLoad={onLoad}
-            onBuffer={onBuffer}
-            onLoadStart={onLoadStart}
-            onEnd={onEnd}
-            onSeek={onSeek}
-            onTextTracks={onTextTracks}
-            paused={!isPlaying}
-            volume={isMuted ? 0 : volume}
-            rate={playbackRate}
-            resizeMode={resizeMode}
-            fullscreenAutorotate={true}
-            fullscreenOrientation='all'
-            controls={false}
-            repeat={false}
-            ignoreSilentSwitch="ignore"
-            mixWithOthers="duck"
-            playWhenInactive={false}
-            playInBackground={false}
-            progressUpdateInterval={100}
-            textTracks={formattedTextTracks}
-            subtitleStyle={{ paddingBottom: isFullscreen ? 100 : 10, fontSize: isFullscreen ? 18 : 16, opacity: 1, }}
-            selectedTextTrack={formattedSelectedTextTrack}
-            
-          />
+      <GestureDetector gesture={pinchGesture}>
+        <Animated.View style={[styles.videoContainer, animatedStyle]}>
+          <TouchableWithoutFeedback onPress={onVideoPress}>
+            <View style={styles.touchableArea}>
+              <Video
+                ref={setVideoRef}
+                source={{ uri: videoUrl }}
+                style={styles.video}
+                onProgress={onProgress}
+                onLoad={handleLoad}
+                onBuffer={onBuffer}
+                onLoadStart={onLoadStart}
+                onEnd={onEnd}
+                onSeek={onSeek}
+                onTextTracks={onTextTracks}
+                paused={!isPlaying}
+                volume={isMuted ? 0 : volume}
+                rate={playbackRate}
+                resizeMode={resizeMode}
+                fullscreenAutorotate={true}
+                fullscreenOrientation="all"
+                controls={false}
+                repeat={false}
+                ignoreSilentSwitch="ignore"
+                mixWithOthers="duck"
+                playWhenInactive={false}
+                playInBackground={false}
+                progressUpdateInterval={100}
+                textTracks={formattedTextTracks}
+                subtitleStyle={{
+                  paddingBottom: isFullscreen ? 120 : 10,
+                  fontSize: isFullscreen ? 18 : 16,
+                  opacity: 0.8,
+                  
+                }}
+                selectedTextTrack={formattedSelectedTextTrack}
+              />
+            </View>
+          </TouchableWithoutFeedback>
+        </Animated.View>
+      </GestureDetector>
 
-          <VideoOverlay
-            showControls={showControls}
-            controlsOpacity={controlsOpacity}
-            isPlaying={isPlaying}
-            isSeekingInProgress={isSeekingInProgress}
-            isBuffering={isBuffering}
-            currentTime={currentTime}
-            duration={duration}
-            isFullscreen={isFullscreen}
-            screenWidth={screenWidth}
-            isLandscape={isLandscape}
-            safeAreaTop={safeAreaTop}
-            onPlayPause={onPlayPause}
-            onSeekBackward={onSeekBackward}
-            onSeekForward={onSeekForward}
-            onSeek={onSeekTo}
-            onFullscreenPress={onFullscreenPress}
-            onOptionsPress={onOptionsPress}
-            playButtonSize={playButtonSize}
-            seekButtonSize={seekButtonSize}
-            seekSeconds={seekSeconds}
-            optionsButtonSize={optionsButtonSize}
-            showTimeLabels={showTimeLabels}
-            colors={colors}
-          />
-        </View>
-      </TouchableWithoutFeedback>
+      <VideoOverlay
+        onVideoPress={onVideoPress}
+        showControls={showControls}
+        controlsOpacity={controlsOpacity}
+        isPlaying={isPlaying}
+        isSeekingInProgress={isSeekingInProgress}
+        isBuffering={isBuffering}
+        currentTime={currentTime}
+        duration={duration}
+        isFullscreen={isFullscreen}
+        screenWidth={screenWidth}
+        isLandscape={isLandscape}
+        safeAreaTop={safeAreaTop}
+        onPlayPause={onPlayPause}
+        onSeekBackward={onSeekBackward}
+        onSeekForward={onSeekForward}
+        onSeek={onSeekTo}
+        onFullscreenPress={onFullscreenPress}
+        onOptionsPress={onOptionsPress}
+        playButtonSize={playButtonSize}
+        seekButtonSize={seekButtonSize}
+        seekSeconds={seekSeconds}
+        optionsButtonSize={optionsButtonSize}
+        showTimeLabels={showTimeLabels}
+        colors={colors}
+        isLive={isLive}
+      />
     </View>
   );
 };
@@ -236,8 +290,13 @@ const styles = StyleSheet.create({
     flex: 1,
     position: 'relative',
   },
+  touchableArea: {
+    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
   video: {
     width: '100%',
     height: '100%',
   },
-}); 
+});

@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import { PlayPauseButton } from './ui/PlayPauseButton';
 import { SeekButtons } from './ui/SeekButtons';
 
@@ -8,12 +8,13 @@ interface VideoControlsProps {
     isSeekingInProgress: boolean;
     isBuffering: boolean;
     onPlayPause: () => void;
-    onSeekBackward: () => void;
-    onSeekForward: () => void;
+    onSeekBackward: (seconds: number) => void;
+    onSeekForward: (seconds: number) => void;
     playButtonSize?: number;
     seekButtonSize?: number;
     seekSeconds?: number;
     gap?: number;
+    isLive: boolean;
 }
 
 export const VideoControls: React.FC<VideoControlsProps> = ({
@@ -27,39 +28,38 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
     seekButtonSize = 50,
     seekSeconds = 10,
     gap = 40,
+    isLive,
 }) => {
-
 
     return (
         <View style={styles.centerControls}>
             <View style={[styles.playbackControls, { top: 25 }]}>
-                {isSeekingInProgress || isBuffering ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color="#fff" />
-                    </View>
-                ) : (
-                    <View style={[styles.playPauseContainer, { gap }]}>
+
+                <View style={[styles.playPauseContainer, { gap }]}>
+                    {!isLive && (
                         <SeekButtons
                             onSeekBackward={onSeekBackward}
-                            onSeekForward={onSeekForward}
                             size={seekButtonSize}
                             seekSeconds={seekSeconds}
                             type="backward"
                         />
-                        <PlayPauseButton
-                            isPlaying={isPlaying}
-                            onPress={onPlayPause}
-                            size={playButtonSize}
-                        />
+                    )}
+                    <PlayPauseButton
+                        isPlaying={isPlaying}
+                        onPress={onPlayPause}
+                        size={playButtonSize}
+                        isLoading={isBuffering || isSeekingInProgress}
+                    />
+                    {!isLive && (
                         <SeekButtons
-                            onSeekBackward={onSeekBackward}
                             onSeekForward={onSeekForward}
                             size={seekButtonSize}
                             seekSeconds={seekSeconds}
                             type="forward"
                         />
-                    </View>
-                )}
+                    )}
+                </View>
+
             </View>
         </View>
     );
@@ -81,14 +81,5 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    loadingContainer: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    },
+
 }); 

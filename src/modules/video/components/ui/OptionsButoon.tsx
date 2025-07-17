@@ -42,7 +42,10 @@ export const OptionsButton: React.FC<OptionsButtonProps> = ({ size, color, onPre
             onPress={handlePress}
             activeOpacity={0.7}
         >
-            <Ionicons name="settings-outline" size={24} color="white" />
+            <Ionicons
+                name="settings-outline"
+                size={size ? size * 0.6 : 24}
+                color={color} />
         </AnimatedTouchableOpacity>
     )
 }
