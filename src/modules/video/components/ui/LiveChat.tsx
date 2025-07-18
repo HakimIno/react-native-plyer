@@ -110,6 +110,8 @@ export const LiveChat = <T extends Record<string, any>>({
         onEndReached={handleLoadOlder}
         onEndReachedThreshold={0.8}
         ListFooterComponent={renderLoadingIndicator}
+        showsVerticalScrollIndicator={false}
+        overScrollMode='never'
         {...rest}
       />
       {showNewMessageButton && (

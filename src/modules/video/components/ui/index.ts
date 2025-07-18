@@ -6,4 +6,5 @@ export { OptionsButton } from './OptionsButoon';
 export { FullscreenButton } from './FullscreenButton';
 export { default as PlaybackSpeedSelector } from './PlaybackSpeedSelector';    
 export { default as LiveIndicator } from './LiveIndicator';
-export { LiveChat } from './LiveChat';    
+export { LiveChat } from './LiveChat';
+export { GiftModal } from './GiftModal';    

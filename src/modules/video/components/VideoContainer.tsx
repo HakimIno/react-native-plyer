@@ -121,6 +121,7 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
     setCommentText,
     handleChatPress,
     handleSendComment,
+    handleSendGift,
   } = useChatSystem(isFullscreen);
 
   const {
@@ -220,6 +221,7 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
             commentText={commentText}
             onCommentTextChange={setCommentText}
             onSendComment={handleSendComment}
+            onSendGift={handleSendGift}
             safeAreaTop={safeAreaTop}
             animatedPanelStyle={animatedPanelStyle}
           />

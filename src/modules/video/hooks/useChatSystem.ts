@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChatItem, generateChatMessages } from '../utility/constants/chat';
+import { ChatItem, generateChatMessages, generateGiftMessage, Gift } from '../utility/constants/chat';
 
 const chatSpeed = {
   slow: [1000, 1000],
@@ -89,19 +89,42 @@ export const useChatSystem = (isFullscreen: boolean) => {
     if (commentText.trim()) {
       const newComment: ChatItem = {
         key: Date.now().toString(),
+        type: 'text',
         content: commentText.trim(),
         description: commentText.trim(),
         createdAt: new Date(),
         user: {
           id: Date.now().toString(),
           name: 'คุณ',
-          avatar: 'https://via.placeholder.com/32/007AFF/FFFFFF?text=U',
+          avatar: 'https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExMHJxMHJtOW15aTlieGhveWJldmo3NWVkenRqa3o3czJ3Z3VzcHhzZyZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9cw/Cguzl9rNeqfPpIO7Yu/giphy.gif',
         },
       };
 
       setMessages(prev => [newComment, ...prev]);
       setCommentText('');
     }
+  };
+
+  const handleSendGift = (gift: Gift) => {
+    const newGiftMessage: ChatItem = {
+      key: Date.now().toString(),
+      type: 'gift',
+      content: `ส่งของขวัญ ${gift.name}`,
+      description: `ส่งของขวัญ ${gift.name} มูลค่า ${gift.value} Coins`,
+      createdAt: new Date(),
+      user: {
+        id: Date.now().toString(),
+        name: 'คุณ',
+        /* The `avatar` property in the ChatItem object is used to store the URL of the avatar image
+        associated with the user who sent the chat message. It is used to display the user's avatar
+        alongside their chat message in the chat interface. The avatar image provides a visual
+        representation of the user and helps users identify who sent each message in the chat. */
+        avatar: 'https://png.pngtree.com/png-clipart/20231002/original/pngtree-cute-cartoon-cat-png-image_13060428.png',
+      },
+      gift: gift,
+    };
+
+    setMessages(prev => [newGiftMessage, ...prev]);
   };
 
   return {
@@ -113,5 +136,6 @@ export const useChatSystem = (isFullscreen: boolean) => {
     setSpeed,
     handleChatPress,
     handleSendComment,
+    handleSendGift,
   };
 }; 
