@@ -1,269 +1,146 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
   StyleSheet,
-  FlatList,
-  TextInput,
+  View,
   TouchableOpacity,
-  KeyboardAvoidingView,
-  Platform,
-  ColorValue,
+  Text,
+  ActivityIndicator,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { FlashList, ListRenderItem } from '@shopify/flash-list';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AntDesign } from '@expo/vector-icons';
 
-interface ChatMessage {
-  id: string;
-  username: string;
-  message: string;
-  timestamp: Date;
-  isModerator?: boolean;
-  isVerified?: boolean;
-  avatar?: string;
+// (interface และ props อื่นๆ เหมือนเดิม)
+interface LiveChatProps<T> {
+  data: T[] | null | undefined;
+  renderItem: ListRenderItem<T>;
+  estimatedItemSize?: number;
+  style?: any;
+  showSafeArea?: boolean;
+  onLoadOlder?: () => Promise<void>;
 }
 
-interface LiveChatProps {
-  messages: ChatMessage[];
-  isVisible?: boolean;
-  onSendMessage?: (message: string) => void;
-  onClose?: () => void;
-  colors?: {
-    primary?: ColorValue;
-    secondary?: ColorValue;
-    textColor?: ColorValue;
-    backgroundColor?: ColorValue;
-    inputBackground?: ColorValue;
-    moderatorColor?: ColorValue;
-    verifiedColor?: ColorValue;
-  };
-}
+const SCROLL_OFFSET_THRESHOLD = 100;
 
-export const LiveChat: React.FC<LiveChatProps> = ({
-  messages = [],
-  isVisible = false,
-  onSendMessage,
-  onClose,
-  colors = {
-    primary: '#007AFF',
-    secondary: '#FF4444',
-    textColor: '#FFFFFF',
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
-    inputBackground: 'rgba(255, 255, 255, 0.1)',
-    moderatorColor: '#FFD700',
-    verifiedColor: '#051FF',
-  },
-}) => {
-  const [inputMessage, setInputMessage] = useState('');
-  const flatListRef = useRef<FlatList>(null);
+export const LiveChat = <T extends Record<string, any>>({
+  renderItem,
+  estimatedItemSize = 60,
+  data,
+  showSafeArea = true,
+  onLoadOlder,
+  ...rest
+}: LiveChatProps<T>) => {
+  const listRef = useRef<FlashList<T>>(null);
+  const isScrolledUpRef = useRef(false);
+  const lastDataLength = useRef(0);
+  const [showNewMessageButton, setShowNewMessageButton] = useState(false);
+  const [isLoadingOlder, setIsLoadingOlder] = useState(false);
 
-  useEffect(() => {
-    if (messages.length > 0 && flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: true });
-    }
-  }, [messages]);
+  const insets = useSafeAreaInsets();
 
-  const handleSendMessage = () => {
-    if (inputMessage.trim() && onSendMessage) {
-      onSendMessage(inputMessage.trim());
-      setInputMessage('');
-    }
-  };
-
-  const renderMessage = ({ item }: { item: ChatMessage }) => (
-    <View style={styles.messageContainer}>
-      {/* Avatar */}
-      <View style={styles.avatarContainer}>
-        {item.avatar ? (
-          <Text style={styles.avatarText}>
-            {item.username.charAt(0).toUpperCase()}
-          </Text>
-        ) : (
-          <View style={styles.avatarPlaceholder}>
-            <Text style={styles.avatarText}>
-              {item.username.charAt(0).toUpperCase()}
-            </Text>
-          </View>
-        )}
-      </View>
-      {/* Message Content */}
-      <View style={styles.messageContent}>
-        <View style={styles.messageHeader}>
-          <Text style={[styles.username, { color: colors.textColor }]}>
-            {item.username}
-          </Text>
-          
-          {/* Badges */}
-          <View style={styles.badges}>
-            {item.isModerator && (
-              <Ionicons name="shield-checkmark" size={12} color={colors.moderatorColor} />
-            )}
-            {item.isVerified && (
-              <Ionicons name="checkmark-circle" size={12} color={colors.verifiedColor} />
-            )}
-          </View>
-          
-          <Text style={[styles.timestamp, { color: colors.textColor }]}>
-            {item.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
-        </View>
-        
-        <Text style={[styles.messageText, { color: colors.textColor }]}>
-          {item.message}
-        </Text>
-      </View>
-    </View>
+  const memoizedRenderItem = useCallback<ListRenderItem<T>>(
+    (props) => renderItem(props),
+    [renderItem]
   );
 
-  if (!isVisible) return null;
+  const keyExtractor = useCallback(
+    (item: T, index: number) => `chat-item-${item?.id || index}`,
+    []
+  );
+
+  const handleScroll = useCallback((event: any) => {
+    const offsetY = event.nativeEvent.contentOffset.y;
+    if (offsetY > SCROLL_OFFSET_THRESHOLD) {
+      isScrolledUpRef.current = true;
+    } else {
+      isScrolledUpRef.current = false;
+      if (showNewMessageButton) {
+        setShowNewMessageButton(false);
+      }
+    }
+  }, [showNewMessageButton]);
+
+  useEffect(() => {
+    if (!data || data.length === 0 || isLoadingOlder) return;
+
+    const currentDataLength = data.length;
+    const hasNewMessage = currentDataLength > lastDataLength.current;
+
+    if (hasNewMessage && isScrolledUpRef.current) {
+      setShowNewMessageButton(true);
+    }
+
+    lastDataLength.current = currentDataLength;
+  }, [data, isLoadingOlder]);
+
+
+  const scrollToBottom = useCallback(() => {
+    listRef.current?.scrollToIndex({ index: 0, animated: true });
+    setShowNewMessageButton(false);
+  }, []);
+
+  const handleLoadOlder = useCallback(async () => {
+    if (onLoadOlder && !isLoadingOlder) {
+      setIsLoadingOlder(true);
+      await onLoadOlder();
+      setIsLoadingOlder(false);
+    }
+  }, [isLoadingOlder, onLoadOlder]);
+
+  const renderLoadingIndicator = () => {
+    if (!isLoadingOlder) return null;
+    return (
+      <View style={{ paddingVertical: 20 }}>
+        <ActivityIndicator size="large" color="#888888" />
+      </View>
+    );
+  };
 
   return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: colors.backgroundColor }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.textColor }]}>
-          Live Chat ({messages.length})
-        </Text>
-        <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-          <Ionicons name="close" size={24} color={colors.textColor} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Messages List */}
-      <FlatList
-        ref={flatListRef}
-        data={messages}
-        renderItem={renderMessage}
-        keyExtractor={(item) => item.id}
-        style={styles.messagesList}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.messagesContent}
+    <View style={styles.container}>
+      <FlashList<T>
+        ref={listRef}
+        data={data}
+        renderItem={memoizedRenderItem}
+        keyExtractor={keyExtractor}
+        estimatedItemSize={estimatedItemSize}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        inverted
+        onEndReached={handleLoadOlder}
+        onEndReachedThreshold={0.8}
+        ListFooterComponent={renderLoadingIndicator}
+        {...rest}
       />
-
-      {/* Input Area */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={[styles.textInput, { 
-            backgroundColor: colors.inputBackground,
-            color: colors.textColor,
-          }]}
-          value={inputMessage}
-          onChangeText={setInputMessage}
-          placeholder="Type a message..."
-          placeholderTextColor="rgba(255, 255, 255, 0.3)"
-          multiline
-          maxLength={200}
-        />
-        <TouchableOpacity
-          style={styles.sendButton}
-          onPress={handleSendMessage}
-          disabled={!inputMessage.trim()}
-        >
-          <Ionicons 
-            name="send" 
-            size={18} 
-            color={inputMessage.trim() ? colors.textColor : 'rgba(255, 255, 255, 0.3)'} 
-          />
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      {showNewMessageButton && (
+        <View style={[styles.newMessageContainer, { bottom: (showSafeArea ? insets.bottom : 0) + 50 }]}>
+          <TouchableOpacity style={styles.newMessageButton} onPress={scrollToBottom}>
+            <AntDesign name="arrowdown" size={22} color="#1a1a1a" />
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    paddingBottom: 60,
+  },
+  newMessageContainer: {
     position: 'absolute',
-    right: 0,
-    top: 0,
-    bottom: 0,
-    width: 300,
-    zIndex: 10
+    alignSelf: 'center',
+    zIndex: 1,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  closeButton: {
+  newMessageButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     padding: 4,
+    borderRadius: 100,
   },
-  messagesList: {
-    flex: 1
+  newMessageButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
   },
-  messagesContent: {
-    padding: 12,
-  },
-  messageContainer: {
-    flexDirection: 'row',
-    marginBottom: 12
-  },
-  avatarContainer: {
-    marginRight: 8,
-  },
-  avatarPlaceholder: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    fontSize: 14,
-    fontWeight: 600,
-    color: '#FFFFFF',
-  },
-  messageContent: {
-    flex: 1,
-  },
-  messageHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  username: {
-    fontSize: 12,
-    fontWeight: 600,
-    marginRight: 6
-  },
-  badges: {
-    flexDirection: 'row',
-    marginRight: 6,
-  },
-  timestamp: {
-    fontSize: 10,
-    opacity: 0.7,
-  },
-  messageText: {
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 12,
-    gap: 8,
-  },
-  textInput: {
-    flex: 1,
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    fontSize: 14,
-    maxHeight: 80,
-  },
-  sendButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-}); 
+});

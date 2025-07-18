@@ -1,13 +1,16 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
 import { OptionsButton } from './ui';
+import { ChatButton } from './ui/ChatButton';
 
 interface VideoTopControlsProps {
   onOptionsPress: () => void;
+  onChatPress: () => void;
   safeAreaTop: number;
   isLandscape: boolean;
   optionsButtonSize?: number;
   optionsButtonColor?: string;
+  isLive: boolean;
 }
 
 export const VideoTopControls: React.FC<VideoTopControlsProps> = ({
@@ -15,14 +18,24 @@ export const VideoTopControls: React.FC<VideoTopControlsProps> = ({
   safeAreaTop,
   optionsButtonSize = 25,
   optionsButtonColor = '#fff',
+  onChatPress,
+  isLive,
 }) => {
   const topControlsStyle = [
     styles.topControls,
-    { top: safeAreaTop + 15, right: 20 },
+    { top: safeAreaTop + 10, right: 20 },
   ];
 
   return (
-    <View style={topControlsStyle}>
+    <View style={[topControlsStyle, { flexDirection: 'row', alignItems: 'center', gap: 8 }]}>
+      {isLive && (
+        <ChatButton
+          isOptions={true}
+          onPress={onChatPress}
+          size={32}
+          color={optionsButtonColor}
+        />
+      )}
       <OptionsButton
         isOptions={true}
         onPress={onOptionsPress}
@@ -37,5 +50,5 @@ const styles = StyleSheet.create({
   topControls: {
     position: 'absolute',
   },
-  
+
 }); 

@@ -1,15 +1,19 @@
-import React, { useMemo, useState } from 'react';
-import { View, StyleSheet, StatusBar, ColorValue, TouchableWithoutFeedback } from 'react-native';
-import Video from 'react-native-video';
-import { Gesture, GestureDetector, PinchGestureHandler, PinchGestureHandlerGestureEvent } from 'react-native-gesture-handler';
-import Animated, {
-  useAnimatedGestureHandler,
-  useAnimatedStyle,
-  useSharedValue,
-} from 'react-native-reanimated';
+import React from 'react';
+import { View, StyleSheet, StatusBar, ColorValue } from 'react-native';
+import { GestureDetector } from 'react-native-gesture-handler';
+import Animated from 'react-native-reanimated';
 import { VideoOverlay } from './VideoOverlay';
 import { TextTrack } from '../../../types';
 import { SharedValue } from 'react-native-reanimated';
+import { VideoElement } from './VideoElement';
+import { ChatPanel } from './ChatPanel';
+import {
+  useVideoDimensions,
+  usePinchGesture,
+  useChatSystem,
+  useChatPanel
+} from '../hooks';
+import { formatTextTracks, formatSelectedTextTrack } from '../utility/helpers/textTrackUtils';
 
 interface VideoContainerProps {
   videoUrl: string;
@@ -101,201 +105,147 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
   colors,
   isLive,
 }) => {
-  const [videoDimensions, setVideoDimensions] = useState({ width: 1, height: 1 });
-  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  // Custom hooks
+  const {
+    videoDimensions,
+    containerDimensions,
+    maxScale,
+    handleLayout,
+    handleLoad,
+  } = useVideoDimensions();
 
-  const scale = useSharedValue(1);
-  const savedScale = useSharedValue(1);
+  const {
+    isChatVisible,
+    messages,
+    commentText,
+    setCommentText,
+    handleChatPress,
+    handleSendComment,
+  } = useChatSystem(isFullscreen);
 
-  const maxScale = useMemo(() => {
-    if (videoDimensions.height === 1 || containerDimensions.height === 0) {
-      return 1;
-    }
-    const videoAspectRatio = videoDimensions.width / videoDimensions.height;
-    const containerAspectRatio = containerDimensions.width / containerDimensions.height;
+  const {
+    pinchGesture,
+    animatedVideoStyle,
+  } = usePinchGesture(maxScale);
 
-    if (videoAspectRatio > containerAspectRatio) {
-      return videoAspectRatio / containerAspectRatio;
-    }
-    else {
-      return containerAspectRatio / videoAspectRatio;
-    }
-  }, [videoDimensions, containerDimensions]);
+  const {
+    animatedPanelStyle,
+  } = useChatPanel(isChatVisible, isFullscreen);
 
-  const pinchGesture = Gesture.Pinch()
-    .onStart(() => {
-      savedScale.value = scale.value;
-    })
-    .onUpdate((event) => {
-      const newScale = savedScale.value * event.scale;
-      scale.value = Math.max(1, Math.min(newScale, maxScale));
-    })
-    .onEnd(() => {
-      savedScale.value = scale.value;
-    });
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  const formattedTextTracks = textTracks.map((track) => ({
-    title: track.label,
-    language: track.language.substring(0, 2).toLowerCase() as any,
-    type: 'text/vtt' as any,
-    uri: track.src,
-  }));
-
-  const formattedSelectedTextTrack = selectedTextTrack
-    ? (() => {
-      switch (selectedTextTrack.type) {
-        case 'disabled':
-          return { type: 'disabled' as any };
-        case 'index':
-          const index = selectedTextTrack.value as number;
-          if (index >= 0 && index < formattedTextTracks.length) {
-            return { type: 'index' as any, value: index };
-          }
-          return { type: 'disabled' as any };
-        case 'language':
-          return { type: 'language' as any, value: selectedTextTrack.value };
-        case 'title':
-          return { type: 'title' as any, value: selectedTextTrack.value };
-        case 'system':
-        default:
-          const defaultTrack = formattedTextTracks.findIndex((track) =>
-            textTracks.find((original) => original.src === track.uri)?.default
-          );
-          if (defaultTrack >= 0) {
-            return { type: 'index' as any, value: defaultTrack };
-          }
-          return formattedTextTracks.length > 0
-            ? { type: 'index' as any, value: 0 }
-            : { type: 'disabled' as any };
-      }
-    })()
-    : formattedTextTracks.length > 0
-      ? { type: 'index' as any, value: 0 }
-      : { type: 'disabled' as any };
+  // Text track formatting
+  const formattedTextTracks = formatTextTracks(textTracks);
+  const formattedSelectedTextTrack = formatSelectedTextTrack(
+    selectedTextTrack,
+    formattedTextTracks,
+    textTracks
+  );
 
   const containerStyle = [
-    styles.container,
-    isFullscreen && styles.fullscreenContainer,
+    styles.videoPlayerContainer,
     style,
   ];
 
-  const handleLayout = (event: any) => {
-    const { width, height } = event.nativeEvent.layout;
-    setContainerDimensions({ width, height });
-  };
-
-  const handleLoad = (data: any) => {
-    setVideoDimensions({
-      width: data.naturalSize.width,
-      height: data.naturalSize.height,
-    });
+  // Enhanced load handler that calls both hook and prop handler
+  const enhancedHandleLoad = (data: any) => {
+    handleLoad(data);
     onLoad(data);
   };
 
+
   return (
-    <View style={containerStyle} onLayout={handleLayout}>
+    <View style={styles.splitContainer}>
       <StatusBar hidden={isFullscreen} />
+      <View style={containerStyle} onLayout={handleLayout}>
+        <GestureDetector gesture={pinchGesture}>
+          <Animated.View style={[styles.animatedVideoWrapper, animatedVideoStyle]}>
+            <VideoElement
+              videoUrl={videoUrl}
+              setVideoRef={setVideoRef}
+              isPlaying={isPlaying}
+              isMuted={isMuted}
+              volume={volume}
+              playbackRate={playbackRate}
+              resizeMode={resizeMode}
+              isFullscreen={isFullscreen}
+              onVideoPress={onVideoPress}
+              onProgress={onProgress}
+              onLoad={enhancedHandleLoad}
+              onBuffer={onBuffer}
+              onLoadStart={onLoadStart}
+              onEnd={onEnd}
+              onSeek={onSeek}
+              onTextTracks={onTextTracks}
+              formattedTextTracks={formattedTextTracks}
+              formattedSelectedTextTrack={formattedSelectedTextTrack}
+            />
+          </Animated.View>
+        </GestureDetector>
 
-      <GestureDetector gesture={pinchGesture}>
-        <Animated.View style={[styles.videoContainer, animatedStyle]}>
-          <TouchableWithoutFeedback onPress={onVideoPress}>
-            <View style={styles.touchableArea}>
-              <Video
-                ref={setVideoRef}
-                source={{ uri: videoUrl }}
-                style={styles.video}
-                onProgress={onProgress}
-                onLoad={handleLoad}
-                onBuffer={onBuffer}
-                onLoadStart={onLoadStart}
-                onEnd={onEnd}
-                onSeek={onSeek}
-                onTextTracks={onTextTracks}
-                paused={!isPlaying}
-                volume={isMuted ? 0 : volume}
-                rate={playbackRate}
-                resizeMode={resizeMode}
-                fullscreenAutorotate={true}
-                fullscreenOrientation="all"
-                controls={false}
-                repeat={false}
-                ignoreSilentSwitch="ignore"
-                mixWithOthers="duck"
-                playWhenInactive={false}
-                playInBackground={false}
-                progressUpdateInterval={100}
-                textTracks={formattedTextTracks}
-                subtitleStyle={{
-                  paddingBottom: isFullscreen ? 120 : 10,
-                  fontSize: isFullscreen ? 18 : 16,
-                  opacity: 0.8,
-                  
-                }}
-                selectedTextTrack={formattedSelectedTextTrack}
-              />
-            </View>
-          </TouchableWithoutFeedback>
+        <VideoOverlay
+          onVideoPress={onVideoPress}
+          showControls={showControls}
+          controlsOpacity={controlsOpacity}
+          isPlaying={isPlaying}
+          isSeekingInProgress={isSeekingInProgress}
+          isBuffering={isBuffering}
+          currentTime={currentTime}
+          duration={duration}
+          isFullscreen={isFullscreen}
+          screenWidth={containerDimensions.width}
+          isLandscape={isLandscape}
+          safeAreaTop={safeAreaTop}
+          onPlayPause={onPlayPause}
+          onSeekBackward={onSeekBackward}
+          onSeekForward={onSeekForward}
+          onSeek={onSeekTo}
+          onFullscreenPress={onFullscreenPress}
+          onOptionsPress={onOptionsPress}
+          onChatPress={handleChatPress}
+          playButtonSize={playButtonSize}
+          seekButtonSize={seekButtonSize}
+          seekSeconds={seekSeconds}
+          optionsButtonSize={optionsButtonSize}
+          showTimeLabels={showTimeLabels}
+          colors={colors}
+          isLive={isLive}
+        />
+      </View>
+
+      {isFullscreen && (
+        <Animated.View style={[styles.rightPanel, animatedPanelStyle]}>
+
+          <ChatPanel
+            isVisible={isChatVisible}
+            messages={messages}
+            commentText={commentText}
+            onCommentTextChange={setCommentText}
+            onSendComment={handleSendComment}
+            safeAreaTop={safeAreaTop}
+            animatedPanelStyle={animatedPanelStyle}
+          />
         </Animated.View>
-      </GestureDetector>
-
-      <VideoOverlay
-        onVideoPress={onVideoPress}
-        showControls={showControls}
-        controlsOpacity={controlsOpacity}
-        isPlaying={isPlaying}
-        isSeekingInProgress={isSeekingInProgress}
-        isBuffering={isBuffering}
-        currentTime={currentTime}
-        duration={duration}
-        isFullscreen={isFullscreen}
-        screenWidth={screenWidth}
-        isLandscape={isLandscape}
-        safeAreaTop={safeAreaTop}
-        onPlayPause={onPlayPause}
-        onSeekBackward={onSeekBackward}
-        onSeekForward={onSeekForward}
-        onSeek={onSeekTo}
-        onFullscreenPress={onFullscreenPress}
-        onOptionsPress={onOptionsPress}
-        playButtonSize={playButtonSize}
-        seekButtonSize={seekButtonSize}
-        seekSeconds={seekSeconds}
-        optionsButtonSize={optionsButtonSize}
-        showTimeLabels={showTimeLabels}
-        colors={colors}
-        isLive={isLive}
-      />
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  rightPanel: {
+    backgroundColor: '#1a1a1a',
+    overflow: 'hidden',
+  },
+  splitContainer: {
     flex: 1,
+    flexDirection: 'row',
     backgroundColor: '#000',
   },
-  fullscreenContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1000,
-  },
-  videoContainer: {
+  videoPlayerContainer: {
     flex: 1,
-    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
   },
-  touchableArea: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  video: {
+  animatedVideoWrapper: {
     width: '100%',
     height: '100%',
   },

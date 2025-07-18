@@ -31,6 +31,7 @@ interface VideoOverlayProps {
   onSeek: (time: number) => void;
   onFullscreenPress: () => void;
   onOptionsPress: () => void;
+  onChatPress: () => void;
 
   // Customization props
   playButtonSize?: number;
@@ -62,6 +63,7 @@ export const VideoOverlay: React.FC<VideoOverlayProps> = ({
   onSeek,
   onFullscreenPress,
   onOptionsPress,
+  onChatPress,
   playButtonSize = 70,
   seekButtonSize = 50,
   seekSeconds = 10,
@@ -103,6 +105,8 @@ export const VideoOverlay: React.FC<VideoOverlayProps> = ({
           safeAreaTop={safeAreaTop}
           isLandscape={isLandscape}
           optionsButtonSize={optionsButtonSize}
+          isLive={isLive}
+          onChatPress={onChatPress}
         />
 
         {/* Bottom Controls */}

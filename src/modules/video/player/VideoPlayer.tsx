@@ -87,7 +87,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   
   // Hooks
   const { top } = useSafeAreaInsets();
-  const screenData = useVideoDimensions();
+  const { videoDimensions, containerDimensions } = useVideoDimensions();
   const {
     videoState,
     setVideoRef,
@@ -222,8 +222,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
         isFullscreen={videoState.isFullscreen}
         textTracks={videoState.availableTextTracks}
         selectedTextTrack={videoState.selectedTextTrack}
-        screenWidth={screenData.width}
-        isLandscape={screenData.isLandscape}
+        screenWidth={containerDimensions.width}
+        isLandscape={containerDimensions.isLandscape}
         safeAreaTop={top}
         showControls={showControls}
         controlsOpacity={controlsOpacity}
