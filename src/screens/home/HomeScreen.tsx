@@ -9,18 +9,25 @@ import {
   Image,
   StatusBar,
   Platform,
+  Dimensions,
 } from 'react-native';
+import { CompositeNavigationProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { Ionicons } from '@expo/vector-icons';
-import { RootStackParamList, VideoItem } from '../../types';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { RootStackParamList, BottomTabParamList, VideoItem } from '../../types';
 import { useVideoPlayer, useVideoPlaylist } from '../../modules/video/hooks/useVideoPlayer';
 import { formatTime } from '../../modules/video/utility/helpers/timeUtils';
 import { getCachedVideoThumbnail } from '../../modules/video/utility/helpers/thumbnailUtils';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 
+const { width: screenWidth } = Dimensions.get('window');
 
-
-type HomeScreenNavigationProp = StackNavigationProp<RootStackParamList, 'Home'>;
+type HomeScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<BottomTabParamList, 'Home'>,
+  StackNavigationProp<RootStackParamList>
+>;
 
 interface Props {
   navigation: HomeScreenNavigationProp;
@@ -98,7 +105,7 @@ const HomeScreen = ({ navigation }: Props) => {
       id: '5',
       title: 'Cartoon Network',
       url: 'https://bitdash-a.akamaihd.net/content/sintel/hls/playlist.m3u8',
-      thumbnail: '',
+      thumbnail: 'https://uibundle.s3.amazonaws.com/images/product-cover-1631523089-product-cover-1626754257-cover-jpg-jpeg',
       isLocal: false,
       isLive: true,
     },
@@ -109,8 +116,6 @@ const HomeScreen = ({ navigation }: Props) => {
       sampleVideos.forEach(video => addToPlaylist(video));
     }
   }, []);
-
-
 
   const handlePlayVideo = (video: VideoItem, index: number) => {
     setCurrentVideo(video, index);
@@ -167,19 +172,16 @@ const HomeScreen = ({ navigation }: Props) => {
         <View style={styles.thumbnailContainer}>
           {currentThumbnail && !isGeneratingThumbnail ? (
             <Image
-              source={{ uri: currentThumbnail }}
+              source={{ uri: currentThumbnail ?? item.thumbnail }}
               style={styles.thumbnail}
               resizeMode="cover"
-              onError={() => {
-                console.log('Failed to load thumbnail:', currentThumbnail);
-              }}
+
             />
           ) : (
             <View style={styles.thumbnailPlaceholder}>
-              <Ionicons name="image-outline" size={100} color="#666" />
+              <Ionicons name="play-circle-outline" size={60} color="#666" />
             </View>
           )}
-
 
           {item.duration && (
             <View style={styles.durationBadge}>
@@ -189,21 +191,39 @@ const HomeScreen = ({ navigation }: Props) => {
             </View>
           )}
 
+          {item.isLive && (
+            <View style={styles.liveBadge}>
+              <View style={styles.liveIndicator} />
+              <Text style={styles.liveText}>LIVE</Text>
+            </View>
+          )}
 
           <View style={styles.playOverlay}>
-            <Ionicons name="play-circle" size={56} color="#fff" />
+            <View style={styles.playButton}>
+              <Ionicons name="play" size={30} color="#fff" />
+            </View>
           </View>
         </View>
 
         <View style={styles.videoInfo}>
-          <Text style={styles.videoTitle} numberOfLines={2}>
-            {item.title}
-          </Text>
-          <View style={styles.videoMeta}>
-            <Ionicons name={item.isLocal ? 'phone-portrait-outline' : 'globe-outline'} size={18} color="#aaa" />
-            <Text style={styles.videoType}>
-              {item.isLocal ? 'Local Video' : 'Online Stream'}
-            </Text>
+          <View style={styles.videoHeader}>
+            <View style={styles.channelAvatar}>
+              <Ionicons name="person" size={20} color="rgb(100, 100, 100)" />
+            </View>
+            <View style={styles.videoDetails}>
+              <Text style={styles.videoTitle} numberOfLines={2}>
+                {item.title}
+              </Text>
+              <Text style={styles.channelName}>Video Channel</Text>
+              <View style={styles.videoStats}>
+                <Text style={styles.videoStatsText}>1.2K views</Text>
+                <Text style={styles.videoStatsText}>•</Text>
+                <Text style={styles.videoStatsText}>2 days ago</Text>
+              </View>
+            </View>
+            <TouchableOpacity style={styles.moreButton}>
+              <Ionicons name="ellipsis-vertical" size={16} color="#666" />
+            </TouchableOpacity>
           </View>
         </View>
       </TouchableOpacity>
@@ -211,53 +231,92 @@ const HomeScreen = ({ navigation }: Props) => {
   };
 
   const { top } = useSafeAreaInsets();
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#0f0f0f" />
+      <LinearGradient
+        colors={['rgb(22, 3, 85)', 'rgba(0, 0, 0, 1)']}
+        start={{ x: 1, y: 0 }}
+        end={{ x: 0.3, y: 0.3 }}
+        style={styles.container}
+      >
 
-
-      <View style={[styles.header, { marginTop: Platform.OS === 'ios' ? 0 : top }]}>
-        <Text style={styles.headerTitle}>Video Player</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => navigation.navigate('AddVideo')}
-        >
-          <Ionicons
-            name="add"
-            size={24}
-            color="#fff"
-          />
-        </TouchableOpacity>
-      </View>
-
-
-
-
-      <View style={styles.playlistSection}>
-        <Text style={styles.sectionTitle}>
-          My Playlist ({videoList.length} videos)
-        </Text>
-
-        {videoList.length === 0 ? (
-          <View style={styles.emptyPlaylistContainer}>
-            <Ionicons name="film-outline" size={70} color="#666" />
-            <Text style={styles.emptyPlaylistText}>Your playlist is empty!</Text>
-            <Text style={styles.emptyPlaylistSubText}>
-              Tap the '+' button at the top right to add your first video.
-            </Text>
+        <View style={[styles.header, { marginTop: Platform.OS === 'ios' ? 0 : top }]}>
+          <View style={styles.headerLeft}>
+            <MaterialCommunityIcons name="dog" size={24} color="white" />
+            <Text style={styles.headerTitle}>Kube</Text>
           </View>
-        ) : (
+          <View style={styles.headerRight}>
+            <TouchableOpacity style={styles.headerButton}>
+              <Ionicons name="share-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerButton}>
+              <Ionicons name="notifications-outline" size={24} color="#fff" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.headerButton}>
+              <Ionicons name="search" size={24} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.categoriesContainer}>
           <FlatList
-            data={videoList}
-            renderItem={renderVideoItem}
-            keyExtractor={(item) => item.id}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContainer}
-            numColumns={1}
-            overScrollMode="never"
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={['All', 'Music', 'Gaming', 'Live', 'News', 'Sports']}
+            keyExtractor={(item) => item}
+            overScrollMode='never'
+            renderItem={({ item, index }) => (
+              <TouchableOpacity
+                style={[
+                  styles.categoryButton,
+                  index === 0 && styles.categoryButtonActive
+                ]}
+              >
+                <Text style={[
+                  styles.categoryText,
+                  index === 0 && styles.categoryTextActive
+                ]}>
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            )}
+            contentContainerStyle={styles.categoriesList}
           />
-        )}
-      </View>
+        </View>
+
+        <View style={styles.contentContainer}>
+          {videoList.length === 0 ? (
+            <View style={styles.emptyPlaylistContainer}>
+              <View style={styles.emptyIconContainer}>
+                <Ionicons name="play-circle-outline" size={80} color="#666" />
+              </View>
+              <Text style={styles.emptyPlaylistText}>No videos yet</Text>
+              <Text style={styles.emptyPlaylistSubText}>
+                Add your first video to start watching
+              </Text>
+              <TouchableOpacity
+                style={styles.addFirstVideoButton}
+                onPress={() => navigation.navigate('AddVideo')}
+              >
+                <Ionicons name="add" size={20} color="#fff" />
+                <Text style={styles.addFirstVideoText}>Add Video</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <FlatList
+              data={videoList}
+              renderItem={renderVideoItem}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.listContainer}
+              numColumns={1}
+              overScrollMode="never"
+            />
+          )}
+        </View>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
@@ -265,63 +324,85 @@ const HomeScreen = ({ navigation }: Props) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0a0a0a',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 18, // Increased padding
-    paddingVertical: 12, // Increased vertical padding
-
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#333',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   headerTitle: {
-    fontSize: 22, // Larger title
-    fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 0.8, // Slightly more spacing
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginLeft: 8,
   },
-  addButton: {
-    width: 44, // Slightly larger touch target
-    height: 44,
-    borderRadius: 22, // Perfect circle
-    backgroundColor: '#007AFF',
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 6 }, // Softer shadow
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
   },
-
-  playlistSection: {
+  addButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ff0000',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoriesContainer: {
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#333',
+  },
+  categoriesList: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  categoryButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    marginRight: 8,
+  },
+  categoryButtonActive: {
+    backgroundColor: '#fff',
+  },
+  categoryText: {
+    color: '#fff',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  categoryTextActive: {
+    color: '#000',
+  },
+  contentContainer: {
     flex: 1,
-    paddingHorizontal: 15, // Increased padding
-    paddingTop: 10, // Increased padding
-  },
-  sectionTitle: {
-    fontSize: 16, // Larger section title
-    fontWeight: '700', // Bolder
-    marginBottom: 15, // More space
-    color: '#ffffff',
-    letterSpacing: 0.5,
   },
   listContainer: {
-    paddingBottom: 40,
+    paddingBottom: 100,
   },
   videoCard: {
-    backgroundColor: 'rgba(20, 20, 20, 1)', // Slightly more opaque
-    borderRadius: 10, // More rounded corners
-    marginBottom: 20,
-    overflow: 'hidden',
-
+    marginBottom: 8,
   },
   thumbnailContainer: {
     position: 'relative',
     aspectRatio: 16 / 9,
-    justifyContent: 'center', // Center content when image is not loaded
-    alignItems: 'center',
+    backgroundColor: '#1a1a1a',
   },
   thumbnail: {
     width: '100%',
@@ -330,30 +411,46 @@ const styles = StyleSheet.create({
   thumbnailPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: 'rgba(40, 40, 40, 0.8)',
+    backgroundColor: '#1a1a1a',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  thumbnailPlaceholderText: {
-    color: '#999',
-    marginTop: 10, // Adjusted margin
-    fontSize: 15,
-    fontWeight: '500',
-  },
   durationBadge: {
     position: 'absolute',
-    bottom: 10, // Slightly closer to bottom
-    right: 10, // Slightly closer to right
-    backgroundColor: 'rgba(0, 0, 0, 0.8)', // Slightly less opaque
-    paddingHorizontal: 8, // Slightly less padding
-    paddingVertical: 4, // Slightly less padding
-    borderRadius: 8, // Softer corners
+    bottom: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   durationText: {
-    color: '#ffffff',
-    fontSize: 11, // Slightly smaller font
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  liveBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#ff0000',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  liveIndicator: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#fff',
+    marginRight: 4,
+  },
+  liveText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   playOverlay: {
     position: 'absolute',
@@ -363,51 +460,99 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.3)', // Slightly more visible overlay
-    borderRadius: 10, // Match card radius
+  },
+  playButton: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   videoInfo: {
-    padding: 16, // Consistent padding
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  videoHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  channelAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  videoDetails: {
+    flex: 1,
+    marginRight: 8,
   },
   videoTitle: {
-    fontSize: 19, // Slightly larger title
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 10, // Reduced margin
-    lineHeight: 26, // Better line height
-    letterSpacing: 0.3,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#fff',
+    marginBottom: 4,
+    lineHeight: 22,
   },
-  videoMeta: {
+  channelName: {
+    fontSize: 12,
+    color: '#aaa',
+    marginBottom: 2,
+  },
+  videoStats: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6, // Reduced gap
+    gap: 4,
   },
-  videoType: {
-    fontSize: 13, // Slightly smaller
-    color: '#aaa', // Softer grey
-    fontWeight: '600',
+  videoStatsText: {
+    fontSize: 12,
+    color: '#aaa',
+  },
+  moreButton: {
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyPlaylistContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 30, // Reduced padding
-    marginTop: 40, // Reduced top margin
+    paddingHorizontal: 32,
+  },
+  emptyIconContainer: {
+    marginBottom: 24,
   },
   emptyPlaylistText: {
-    fontSize: 24, // Larger
-    color: '#ffffff',
-    marginTop: 20, // Adjusted margin
-    fontWeight: '800', // Bolder
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
     textAlign: 'center',
   },
   emptyPlaylistSubText: {
-    fontSize: 15, // Slightly smaller
-    color: '#888',
-    marginTop: 10, // Adjusted margin
+    fontSize: 16,
+    color: '#aaa',
     textAlign: 'center',
-    lineHeight: 22,
-    maxWidth: 300, // Wider
+    marginBottom: 32,
+    lineHeight: 24,
+  },
+  addFirstVideoButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ff0000',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+    gap: 8,
+  },
+  addFirstVideoText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

@@ -8,6 +8,7 @@
     "android:debug": "expo run:android --mode debug",
     "android:release": "expo run:android --mode release",
     "android:build:dev:local": "eas build --profile development --platform android --local",
+    "android:build:preview:local": "eas build --profile preview --platform android --local",
     "android:build:dev:production": "eas build --profile development --platform android",
     "android:build:prod:local": "eas build --profile production --platform android --local",
     "android:build:prod:production": "eas build --profile production --platform android",
@@ -15,6 +16,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@expo/ui": "~0.1.1-alpha.10",
     "@expo/vector-icons": "^14.1.0",
     "@faker-js/faker": "^9.9.0",
     "@react-native-masked-view/masked-view": "^0.3.2",
@@ -25,6 +27,7 @@
     "@shopify/flash-list": "^1.8.3",
     "expo": "~53.0.13",
     "expo-av": "^15.1.6",
+    "expo-blur": "^14.1.5",
     "expo-dev-client": "^5.2.2",
     "expo-document-picker": "~13.1.6",
     "expo-linear-gradient": "~14.1.5",
@@ -39,6 +42,7 @@
     "react-native-reanimated": "~3.17.4",
     "react-native-safe-area-context": "5.4.0",
     "react-native-screens": "^4.11.1",
+    "react-native-svg": "^15.12.1",
     "react-native-video": "^6.15.0",
     "react-redux": "^9.2.0"
   },

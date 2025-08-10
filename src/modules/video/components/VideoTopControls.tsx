@@ -23,7 +23,7 @@ export const VideoTopControls: React.FC<VideoTopControlsProps> = ({
 }) => {
   const topControlsStyle = [
     styles.topControls,
-    { top: safeAreaTop + 10, right: 20 },
+    { top: safeAreaTop + 10, right: 10 },
   ];
 
   return (

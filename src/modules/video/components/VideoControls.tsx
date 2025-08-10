@@ -33,7 +33,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
 
     return (
         <View style={styles.centerControls}>
-            <View style={[styles.playbackControls, { top: 25 }]}>
+            <View style={[styles.playbackControls, { top: 35 }]}>
 
                 <View style={[styles.playPauseContainer, { gap }]}>
                     {!isLive && (
@@ -56,6 +56,7 @@ export const VideoControls: React.FC<VideoControlsProps> = ({
                             size={seekButtonSize}
                             seekSeconds={seekSeconds}
                             type="forward"
+                            
                         />
                     )}
                 </View>

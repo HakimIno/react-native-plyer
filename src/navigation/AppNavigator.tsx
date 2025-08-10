@@ -3,8 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { PlayerScreen } from '../screens/player/PlayerScreen';
-import HomeScreen from '../screens/home/HomeScreen';
-import AddVideoScreen from '../screens/addVideo/AddVideoScreen';
+import BottomTabNavigator from './BottomTabNavigator';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -12,7 +11,7 @@ const AppNavigator: React.FC = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Home"
+        initialRouteName="MainTabs"
         screenOptions={{
           headerStyle: {
             backgroundColor: '#000',
@@ -24,29 +23,17 @@ const AppNavigator: React.FC = () => {
         }}
       >
         <Stack.Screen 
-          name="Home" 
-          component={HomeScreen}
+          name="MainTabs" 
+          component={BottomTabNavigator}
           options={{
-            title: 'Video Player',
             headerShown: false,
-            animation: 'fade',
           }}
-          
         />
         <Stack.Screen 
           name="Player" 
           component={PlayerScreen}
           options={{
             title: 'Video Player',
-            headerShown: false,
-            animation: 'slide_from_right',
-          }}
-        />
-        <Stack.Screen 
-          name="AddVideo" 
-          component={AddVideoScreen}
-          options={{
-            title: 'Add Video',
             headerShown: false,
             animation: 'slide_from_right',
           }}

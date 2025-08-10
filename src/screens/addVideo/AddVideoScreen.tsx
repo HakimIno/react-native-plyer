@@ -12,16 +12,21 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
+import { CompositeNavigationProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { RootStackParamList, VideoItem } from '../../types';
+import { RootStackParamList, BottomTabParamList, VideoItem } from '../../types';
 import { useVideoPlaylist } from '../../modules/video/hooks/useVideoPlayer';
 import { isValidVideoUrl } from '../../modules/video/utility/helpers/networkUtils';
 import { getCachedVideoThumbnail } from '../../modules/video/utility/helpers/thumbnailUtils';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-type AddVideoScreenNavigationProp = StackNavigationProp<RootStackParamList, 'AddVideo'>;
+type AddVideoScreenNavigationProp = CompositeNavigationProp<
+  BottomTabNavigationProp<BottomTabParamList, 'AddVideo'>,
+  StackNavigationProp<RootStackParamList>
+>;
 
 interface Props {
   navigation: AddVideoScreenNavigationProp;

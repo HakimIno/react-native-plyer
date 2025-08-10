@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View } from 'react-native';
+import { View, ColorValue } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   useVideoControls, 
@@ -14,7 +14,7 @@ import { BottomSheet, VideoOptionsContent, BottomSheetRefProps } from '../compon
 
 // Constants
 const DEFAULT_AUTO_HIDE_DELAY = 3000;
-const DEFAULT_PLAY_BUTTON_SIZE = 70;
+const DEFAULT_PLAY_BUTTON_SIZE = 65;
 const DEFAULT_SEEK_BUTTON_SIZE = 50;
 const DEFAULT_SEEK_SECONDS = 10;
 const DEFAULT_OPTIONS_BUTTON_SIZE = 25;
@@ -208,49 +208,49 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
 
   return (
     <View style={{ flex: 1 }}>
-      <VideoContainer
-        videoUrl={videoState.currentVideoUrl}
-        setVideoRef={setVideoRef}
-        isPlaying={videoState.isPlaying}
-        isSeekingInProgress={videoState.isSeekingInProgress}
-        isBuffering={videoState.isBuffering}
-        currentTime={videoState.currentTime}
-        duration={videoState.duration}
-        volume={videoState.volume}
-        isMuted={videoState.isMuted}
-        playbackRate={videoState.playbackRate}
-        isFullscreen={videoState.isFullscreen}
-        textTracks={videoState.availableTextTracks}
-        selectedTextTrack={videoState.selectedTextTrack}
-        screenWidth={containerDimensions.width}
-        isLandscape={containerDimensions.isLandscape}
-        safeAreaTop={top}
-        showControls={showControls}
-        controlsOpacity={controlsOpacity}
-        onVideoPress={handleVideoPress}
-        onProgress={handleProgress}
-        onLoad={handleVideoLoad}
-        onBuffer={handleBuffer}
-        onLoadStart={handleLoadStart}
-        onEnd={handleVideoEnd}
-        onSeek={handleSeek}
-        onTextTracks={handleTextTracks}
-        onPlayPause={handlePlayPausePress}
-        onSeekBackward={handleSeekBackward}
-        onSeekForward={handleSeekForward}
-        onSeekTo={handleSeekTo}
-        onFullscreenPress={handleFullscreenPress}
-        onOptionsPress={handleOptionsPress}
-        style={style}
-        resizeMode={resizeMode}
-        playButtonSize={playButtonSize}
-        seekButtonSize={seekButtonSize}
-        seekSeconds={seekSeconds}
-        optionsButtonSize={optionsButtonSize}
-        showTimeLabels={showTimeLabels}
-        colors={['#32CD32', '#ADFF2F', '#F0E68C']}
-        isLive={videoState.isLive}
-      />
+              <VideoContainer
+          videoUrl={videoState.currentVideoUrl}
+          setVideoRef={setVideoRef}
+          isPlaying={videoState.isPlaying}
+          isSeekingInProgress={videoState.isSeekingInProgress}
+          isBuffering={videoState.isBuffering}
+          currentTime={videoState.currentTime}
+          duration={videoState.duration}
+          volume={videoState.volume}
+          isMuted={videoState.isMuted}
+          playbackRate={videoState.playbackRate}
+          isFullscreen={videoState.isFullscreen}
+          textTracks={videoState.availableTextTracks}
+          selectedTextTrack={videoState.selectedTextTrack}
+          screenWidth={containerDimensions.width}
+          isLandscape={containerDimensions.isLandscape}
+          safeAreaTop={top}
+          showControls={showControls}
+          controlsOpacity={controlsOpacity}
+          onVideoPress={handleVideoPress}
+          onProgress={handleProgress}
+          onLoad={handleVideoLoad}
+          onBuffer={handleBuffer}
+          onLoadStart={handleLoadStart}
+          onEnd={handleVideoEnd}
+          onSeek={handleSeek}
+          onTextTracks={handleTextTracks}
+          onPlayPause={handlePlayPausePress}
+          onSeekBackward={handleSeekBackward}
+          onSeekForward={handleSeekForward}
+          onSeekTo={handleSeekTo}
+          onFullscreenPress={handleFullscreenPress}
+          onOptionsPress={handleOptionsPress}
+          style={style}
+          resizeMode={resizeMode}
+          playButtonSize={playButtonSize}
+          seekButtonSize={seekButtonSize}
+          seekSeconds={seekSeconds}
+          optionsButtonSize={optionsButtonSize}
+          showTimeLabels={showTimeLabels}
+          colors={['#ffffff', '#ffffff', '#ffffff']}
+          isLive={videoState.isLive}
+        />
 
       <BottomSheet
         ref={bottomSheetRef}

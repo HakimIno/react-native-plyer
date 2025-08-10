@@ -70,7 +70,14 @@ export interface VideoContextType {
 }
 
 export type RootStackParamList = {
-  Home: undefined;
+  MainTabs: undefined;
   Player: undefined;
+};
+
+export type BottomTabParamList = {
+  Home: undefined;
   AddVideo: undefined;
+  Settings: undefined;
+  Clips: undefined;
+  Follow: undefined;
 }; 

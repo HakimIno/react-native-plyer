@@ -321,7 +321,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    paddingBottom: 5,
+    paddingBottom: 10,
   },
   timeContainer: {
     flexDirection: 'row',
