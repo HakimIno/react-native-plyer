@@ -4,41 +4,52 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { RootStackParamList } from '../types';
 import { PlayerScreen } from '../screens/player/PlayerScreen';
 import BottomTabNavigator from './BottomTabNavigator';
+import { useAuth } from '../hooks/useAuth';
+import AuthNavigator from '../screens/auth/AuthNavigator';
+import { GlobalPiPOverlay } from '../components/common';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 const AppNavigator: React.FC = () => {
+  const isAuthenticated = true
+
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="MainTabs"
+        initialRouteName={isAuthenticated ? 'MainTabs' : 'AuthNavigator'}
         screenOptions={{
           headerStyle: {
             backgroundColor: '#000',
           },
           headerTintColor: '#fff',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-          },
         }}
       >
-        <Stack.Screen 
-          name="MainTabs" 
+        <Stack.Screen
+          name="MainTabs"
           component={BottomTabNavigator}
           options={{
             headerShown: false,
           }}
         />
-        <Stack.Screen 
-          name="Player" 
+
+        <Stack.Screen
+          name="Player"
           component={PlayerScreen}
           options={{
-            title: 'Video Player',
             headerShown: false,
-            animation: 'slide_from_right',
           }}
         />
+
+        <Stack.Screen
+          name="AuthNavigator"
+          component={AuthNavigator}
+          options={{
+            headerShown: false,
+          }}
+        />
+
       </Stack.Navigator>
+      <GlobalPiPOverlay />
     </NavigationContainer>
   );
 };

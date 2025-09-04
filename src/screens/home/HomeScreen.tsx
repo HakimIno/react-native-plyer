@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -17,10 +17,11 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { RootStackParamList, BottomTabParamList, VideoItem } from '../../types';
 import { useVideoPlayer, useVideoPlaylist } from '../../modules/video/hooks/useVideoPlayer';
+import { useThumbnailCache } from '../../modules/video/hooks';
 import { formatTime } from '../../modules/video/utility/helpers/timeUtils';
-import { getCachedVideoThumbnail } from '../../modules/video/utility/helpers/thumbnailUtils';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useVideoList, useVideoListLength } from '../../store/hooks';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -33,22 +34,106 @@ interface Props {
   navigation: HomeScreenNavigationProp;
 }
 
-const HomeScreen = ({ navigation }: Props) => {
-  const { setCurrentVideo } = useVideoPlayer();
-  const { videoList, addToPlaylist } = useVideoPlaylist();
-  const [thumbnailCache, setThumbnailCache] = useState<Map<string, string>>(new Map());
+// Memoized VideoItem component to prevent unnecessary re-renders
+const VideoItemComponent = React.memo(({ 
+  item, 
+  index, 
+  onPress, 
+  getThumbnail,
+  isThumbnailLoading
+}: { 
+  item: VideoItem; 
+  index: number; 
+  onPress: (video: VideoItem, index: number) => void;
+  getThumbnail: (videoId: string, fallbackThumbnail?: string) => string;
+  isThumbnailLoading: (videoId: string) => boolean;
+}) => {
+  const currentThumbnail = getThumbnail(item.id, item.thumbnail);
+  const isLoading = isThumbnailLoading(item.id);
+  const isGeneratingThumbnail = !currentThumbnail || currentThumbnail === '' || currentThumbnail.includes('placeholder');
 
-  // Sample video list for demonstration
-  const sampleVideos: VideoItem[] = [
-    {
-      id: '1',
-      title: 'Sample Video 1 (Auto Thumbnail)',
-      url: 'https://storage.googleapis.com/for_test_f/Kitten-cute.mp4',
-      thumbnail: '', // No thumbnail - will auto-generate
-      duration: 661,
-      isLocal: false,
-      isLive: false,
-    },
+  return (
+    <TouchableOpacity
+      style={styles.videoCard}
+      onPress={() => onPress(item, index)}
+      activeOpacity={0.8}
+    >
+      <View style={styles.thumbnailContainer}>
+        {currentThumbnail && !isGeneratingThumbnail ? (
+          <Image
+            source={{ uri: currentThumbnail }}
+            style={styles.thumbnail}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.thumbnailPlaceholder}>
+            {isLoading ? (
+              <Ionicons name="hourglass-outline" size={40} color="#666" />
+            ) : (
+              <Ionicons name="play-circle-outline" size={60} color="#666" />
+            )}
+          </View>
+        )}
+
+        {item.duration && (
+          <View style={styles.durationBadge}>
+            <Text style={styles.durationText}>
+              {formatTime(item.duration)}
+            </Text>
+          </View>
+        )}
+
+        {item.isLive && (
+          <View style={styles.liveBadge}>
+            <View style={styles.liveIndicator} />
+            <Text style={styles.liveText}>LIVE</Text>
+          </View>
+        )}
+
+        <View style={styles.playOverlay}>
+          <View style={styles.playButton}>
+            <Ionicons name="play" size={30} color="#fff" />
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.videoInfo}>
+        <View style={styles.videoHeader}>
+          <View style={styles.channelAvatar}>
+            <Ionicons name="person" size={20} color="rgb(100, 100, 100)" />
+          </View>
+          <View style={styles.videoDetails}>
+            <Text style={styles.videoTitle} numberOfLines={2}>
+              {item.title}
+            </Text>
+            <Text style={styles.channelName}>Video Channel</Text>
+            <View style={styles.videoStats}>
+              <Text style={styles.videoStatsText}>1.2K views</Text>
+              <Text style={styles.videoStatsText}>•</Text>
+              <Text style={styles.videoStatsText}>2 days ago</Text>
+            </View>
+          </View>
+          <TouchableOpacity style={styles.moreButton}>
+            <Ionicons name="ellipsis-vertical" size={16} color="#666" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+});
+
+const HomeScreen = React.memo(({ navigation }: Props) => {
+  const { setCurrentVideo } = useVideoPlayer();
+  const { addToPlaylist } = useVideoPlaylist();
+  const videoList = useVideoList();
+  const videoListLength = useVideoListLength();
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Use optimized thumbnail cache hook
+  const { getThumbnail, isThumbnailLoading } = useThumbnailCache(videoList);
+
+  // Memoize sample videos to prevent recreation on every render
+  const sampleVideos: VideoItem[] = useMemo(() => [
     {
       id: '2',
       title: 'Big Buck Bunny - Sample Video',
@@ -109,128 +194,113 @@ const HomeScreen = ({ navigation }: Props) => {
       isLocal: false,
       isLive: true,
     },
-  ];
+    {
+      id: '6',
+      title: 'ช่อง 3 TV',
+      url: 'https://lb1-live-mv.v2h-cdn.com/hls/ffae/3hd/3hd.m3u8',
+      thumbnail: 'https://f.ptcdn.info/428/018/000/1398937824-33logo-o.jpg',
+      isLocal: false,
+      isLive: true,
+    },
+  ], []);
 
+  // Initialize playlist only once
   useEffect(() => {
-    if (videoList.length === 0) {
+    if (!isInitialized && videoListLength === 0) {
       sampleVideos.forEach(video => addToPlaylist(video));
+      setIsInitialized(true);
     }
-  }, []);
+  }, [isInitialized, videoListLength, addToPlaylist, sampleVideos]);
 
-  const handlePlayVideo = (video: VideoItem, index: number) => {
+  const handlePlayVideo = useCallback((video: VideoItem, index: number) => {
     setCurrentVideo(video, index);
     navigation.navigate('Player');
-  };
+  }, [setCurrentVideo, navigation]);
 
-  useEffect(() => {
-    const loadThumbnailsForVideos = async () => {
-      const videosNeedingThumbnails = videoList.filter((video: VideoItem) => {
-        const shouldGenerateThumbnail = !video.thumbnail ||
-          video.thumbnail.includes('placeholder') ||
-          video.thumbnail.includes('via.placeholder.com') ||
-          video.thumbnail === '';
-
-        return shouldGenerateThumbnail && !thumbnailCache.has(video.id);
-      });
-
-      for (const video of videosNeedingThumbnails) {
-        try {
-          const generatedThumbnail = await getCachedVideoThumbnail(
-            video.url,
-            video.thumbnail,
-            { time: 2000, quality: 0.7 }
-          );
-
-          if (generatedThumbnail) {
-            setThumbnailCache(prev => {
-              const newCache = new Map(prev);
-              newCache.set(video.id, generatedThumbnail);
-              return newCache;
-            });
-          }
-        } catch (error) {
-          console.log('Error generating thumbnail for video:', video.title, error);
-        }
-      }
-    };
-
-    if (videoList.length > 0) {
-      loadThumbnailsForVideos();
-    }
-  }, [videoList]);
-
-  const renderVideoItem = ({ item, index }: { item: VideoItem; index: number }) => {
-    const currentThumbnail = thumbnailCache.get(item.id) || item.thumbnail;
-    const isGeneratingThumbnail = !currentThumbnail || currentThumbnail === '' || currentThumbnail.includes('placeholder');
-
-    return (
-      <TouchableOpacity
-        style={styles.videoCard}
-        onPress={() => handlePlayVideo(item, index)}
-        activeOpacity={0.8}
-      >
-        <View style={styles.thumbnailContainer}>
-          {currentThumbnail && !isGeneratingThumbnail ? (
-            <Image
-              source={{ uri: currentThumbnail ?? item.thumbnail }}
-              style={styles.thumbnail}
-              resizeMode="cover"
-
-            />
-          ) : (
-            <View style={styles.thumbnailPlaceholder}>
-              <Ionicons name="play-circle-outline" size={60} color="#666" />
-            </View>
-          )}
-
-          {item.duration && (
-            <View style={styles.durationBadge}>
-              <Text style={styles.durationText}>
-                {formatTime(item.duration)}
-              </Text>
-            </View>
-          )}
-
-          {item.isLive && (
-            <View style={styles.liveBadge}>
-              <View style={styles.liveIndicator} />
-              <Text style={styles.liveText}>LIVE</Text>
-            </View>
-          )}
-
-          <View style={styles.playOverlay}>
-            <View style={styles.playButton}>
-              <Ionicons name="play" size={30} color="#fff" />
-            </View>
-          </View>
-        </View>
-
-        <View style={styles.videoInfo}>
-          <View style={styles.videoHeader}>
-            <View style={styles.channelAvatar}>
-              <Ionicons name="person" size={20} color="rgb(100, 100, 100)" />
-            </View>
-            <View style={styles.videoDetails}>
-              <Text style={styles.videoTitle} numberOfLines={2}>
-                {item.title}
-              </Text>
-              <Text style={styles.channelName}>Video Channel</Text>
-              <View style={styles.videoStats}>
-                <Text style={styles.videoStatsText}>1.2K views</Text>
-                <Text style={styles.videoStatsText}>•</Text>
-                <Text style={styles.videoStatsText}>2 days ago</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.moreButton}>
-              <Ionicons name="ellipsis-vertical" size={16} color="#666" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
+  const renderVideoItem = useCallback(({ item, index }: { item: VideoItem; index: number }) => (
+    <VideoItemComponent
+      item={item}
+      index={index}
+      onPress={handlePlayVideo}
+      getThumbnail={getThumbnail}
+      isThumbnailLoading={isThumbnailLoading}
+    />
+  ), [handlePlayVideo, getThumbnail, isThumbnailLoading]);
 
   const { top } = useSafeAreaInsets();
+
+  // Memoize categories data
+  const categories = useMemo(() => ['All', 'Music', 'Gaming', 'Live', 'News', 'Sports'], []);
+
+  const renderCategoryItem = useCallback(({ item, index }: { item: string; index: number }) => (
+    <TouchableOpacity
+      style={[
+        styles.categoryButton,
+        index === 0 && styles.categoryButtonActive
+      ]}
+    >
+      <Text style={[
+        styles.categoryText,
+        index === 0 && styles.categoryTextActive
+      ]}>
+        {item}
+      </Text>
+    </TouchableOpacity>
+  ), []);
+
+  // Memoize keyExtractor
+  const keyExtractor = useCallback((item: VideoItem) => item.id, []);
+
+  // Memoize navigation handlers
+  const handleAddVideoPress = useCallback(() => {
+    navigation.navigate('AddVideo');
+  }, [navigation]);
+
+  const handleSharePress = useCallback(() => {
+    // Handle share functionality
+  }, []);
+
+  const handleNotificationsPress = useCallback(() => {
+    // Handle notifications functionality
+  }, []);
+
+  const handleSearchPress = useCallback(() => {
+    // Handle search functionality
+  }, []);
+
+  // Memoize header style
+  const headerStyle = useMemo(() => [
+    styles.header, 
+    { marginTop: Platform.OS === 'ios' ? 0 : top }
+  ], [top]);
+
+  // Memoize FlatList props
+  const flatListProps = useMemo(() => ({
+    showsVerticalScrollIndicator: false,
+    contentContainerStyle: styles.listContainer,
+    numColumns: 1,
+    overScrollMode: "never" as const,
+    removeClippedSubviews: true,
+    maxToRenderPerBatch: 3,
+    windowSize: 5,
+    initialNumToRender: 2,
+    getItemLayout: (data: any, index: number) => ({
+      length: 280, // Approximate height of each item
+      offset: 280 * index,
+      index,
+    }),
+  }), []);
+
+  const categoryListProps = useMemo(() => ({
+    horizontal: true,
+    showsHorizontalScrollIndicator: false,
+    overScrollMode: 'never' as const,
+    contentContainerStyle: styles.categoriesList,
+    removeClippedSubviews: true,
+    maxToRenderPerBatch: 10,
+    windowSize: 5,
+    initialNumToRender: 6,
+  }), []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -242,19 +312,19 @@ const HomeScreen = ({ navigation }: Props) => {
         style={styles.container}
       >
 
-        <View style={[styles.header, { marginTop: Platform.OS === 'ios' ? 0 : top }]}>
+        <View style={headerStyle}>
           <View style={styles.headerLeft}>
             <MaterialCommunityIcons name="dog" size={24} color="white" />
             <Text style={styles.headerTitle}>Kube</Text>
           </View>
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.headerButton}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleSharePress}>
               <Ionicons name="share-outline" size={24} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.headerButton}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleNotificationsPress}>
               <Ionicons name="notifications-outline" size={24} color="#fff" />
             </TouchableOpacity>
-            <TouchableOpacity style={styles.headerButton}>
+            <TouchableOpacity style={styles.headerButton} onPress={handleSearchPress}>
               <Ionicons name="search" size={24} color="#fff" />
             </TouchableOpacity>
           </View>
@@ -262,32 +332,15 @@ const HomeScreen = ({ navigation }: Props) => {
 
         <View style={styles.categoriesContainer}>
           <FlatList
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            data={['All', 'Music', 'Gaming', 'Live', 'News', 'Sports']}
+            {...categoryListProps}
+            data={categories}
             keyExtractor={(item) => item}
-            overScrollMode='never'
-            renderItem={({ item, index }) => (
-              <TouchableOpacity
-                style={[
-                  styles.categoryButton,
-                  index === 0 && styles.categoryButtonActive
-                ]}
-              >
-                <Text style={[
-                  styles.categoryText,
-                  index === 0 && styles.categoryTextActive
-                ]}>
-                  {item}
-                </Text>
-              </TouchableOpacity>
-            )}
-            contentContainerStyle={styles.categoriesList}
+            renderItem={renderCategoryItem}
           />
         </View>
 
         <View style={styles.contentContainer}>
-          {videoList.length === 0 ? (
+          {videoListLength === 0 ? (
             <View style={styles.emptyPlaylistContainer}>
               <View style={styles.emptyIconContainer}>
                 <Ionicons name="play-circle-outline" size={80} color="#666" />
@@ -298,7 +351,7 @@ const HomeScreen = ({ navigation }: Props) => {
               </Text>
               <TouchableOpacity
                 style={styles.addFirstVideoButton}
-                onPress={() => navigation.navigate('AddVideo')}
+                onPress={handleAddVideoPress}
               >
                 <Ionicons name="add" size={20} color="#fff" />
                 <Text style={styles.addFirstVideoText}>Add Video</Text>
@@ -306,20 +359,17 @@ const HomeScreen = ({ navigation }: Props) => {
             </View>
           ) : (
             <FlatList
+              {...flatListProps}
               data={videoList}
               renderItem={renderVideoItem}
-              keyExtractor={(item) => item.id}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContainer}
-              numColumns={1}
-              overScrollMode="never"
+              keyExtractor={keyExtractor}
             />
           )}
         </View>
       </LinearGradient>
     </SafeAreaView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

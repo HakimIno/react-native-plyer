@@ -70,6 +70,7 @@ export interface VideoContextType {
 }
 
 export type RootStackParamList = {
+  AuthNavigator: undefined;
   MainTabs: undefined;
   Player: undefined;
 };

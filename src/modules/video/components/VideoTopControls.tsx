@@ -1,11 +1,12 @@
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { OptionsButton } from './ui';
+import { OptionsButton, PiPButton } from './ui';
 import { ChatButton } from './ui/ChatButton';
 
 interface VideoTopControlsProps {
   onOptionsPress: () => void;
   onChatPress: () => void;
+  onPiPPress?: () => void;
   safeAreaTop: number;
   isLandscape: boolean;
   optionsButtonSize?: number;
@@ -19,6 +20,7 @@ export const VideoTopControls: React.FC<VideoTopControlsProps> = ({
   optionsButtonSize = 25,
   optionsButtonColor = '#fff',
   onChatPress,
+  onPiPPress,
   isLive,
 }) => {
   const topControlsStyle = [
@@ -32,6 +34,13 @@ export const VideoTopControls: React.FC<VideoTopControlsProps> = ({
         <ChatButton
           isOptions={true}
           onPress={onChatPress}
+          size={32}
+          color={optionsButtonColor}
+        />
+      )}
+      {onPiPPress && (
+        <PiPButton
+          onPress={onPiPPress}
           size={32}
           color={optionsButtonColor}
         />

@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MMKV } from 'react-native-mmkv';
 import { TabBarConfig, TabIconConfig, defaultTabConfig, defaultTabIconConfig, tabConfigPresets } from '../constants/tabConfig';
 import { Theme } from '../constants/theme';
+
+// Initialize MMKV storage
+const storage = new MMKV();
 
 interface TabConfigContextType {
   tabConfig: TabBarConfig;
@@ -41,9 +44,9 @@ export const TabConfigProvider: React.FC<TabConfigProviderProps> = ({
     updateConfigurationsForTheme(theme);
   }, [theme]);
 
-  const loadSavedTabConfig = async () => {
+  const loadSavedTabConfig = () => {
     try {
-      const savedPreset = await AsyncStorage.getItem('selectedTabPreset');
+      const savedPreset = storage.getString('selectedTabPreset');
       if (savedPreset) {
         setCurrentPreset(savedPreset);
         applyPreset(savedPreset);
@@ -84,12 +87,12 @@ export const TabConfigProvider: React.FC<TabConfigProviderProps> = ({
     }));
   };
 
-  const setTabPreset = async (preset: string) => {
+  const setTabPreset = (preset: string) => {
     setCurrentPreset(preset);
     applyPreset(preset);
     
     try {
-      await AsyncStorage.setItem('selectedTabPreset', preset);
+      storage.set('selectedTabPreset', preset);
     } catch (error) {
       console.error('Error saving tab preset:', error);
     }

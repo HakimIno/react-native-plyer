@@ -21,7 +21,12 @@ export interface ThemeColors {
     primary: string;
     secondary: string;
     disabled: string;
+    google: string;
+    apple: string;
   };
+  border: string;
+  error: string;
+  disabled: string;
 }
 
 export interface ThemeSpacing {
@@ -37,22 +42,27 @@ export interface ThemeTypography {
   h1: {
     fontSize: number;
     fontWeight: string;
+    fontFamily: string;
   };
   h2: {
     fontSize: number;
     fontWeight: string;
+    fontFamily: string;
   };
   h3: {
     fontSize: number;
     fontWeight: string;
+    fontFamily: string;
   };
   body: {
     fontSize: number;
     fontWeight: string;
+    fontFamily: string;
   };
   caption: {
     fontSize: number;
     fontWeight: string;
+    fontFamily: string;
   };
 }
 
@@ -94,7 +104,7 @@ export interface Theme {
 // Dark Theme
 export const darkTheme: Theme = {
   colors: {
-    primary: '#6366f1',
+    primary: '#4338ca',
     secondary: '#8b5cf6',
     background: '#000000',
     surface: '#1a1a1a',
@@ -116,7 +126,12 @@ export const darkTheme: Theme = {
       primary: '#6366f1',
       secondary: '#8b5cf6',
       disabled: '#52525b',
+      google: '#4285F4',
+      apple: '#000000',
     },
+    border: '#e9ecef',
+    error: '#f44336',
+    disabled: '#52525b',
   },
   spacing: {
     xs: 4,
@@ -130,22 +145,27 @@ export const darkTheme: Theme = {
     h1: {
       fontSize: 32,
       fontWeight: 'bold',
+      fontFamily: 'Anuphan-Thai-700',
     },
     h2: {
       fontSize: 24,
       fontWeight: '600',
+      fontFamily: 'Anuphan-Thai-600',
     },
     h3: {
       fontSize: 20,
       fontWeight: '600',
+      fontFamily: 'Anuphan-Thai-600',
     },
     body: {
-      fontSize: 16,
+      fontSize: 16, 
       fontWeight: 'normal',
+      fontFamily: 'Anuphan-Thai-400',
     },
     caption: {
       fontSize: 12,
       fontWeight: '500',
+      fontFamily: 'Anuphan-Thai-500',
     },
   },
   borderRadius: {
@@ -204,8 +224,13 @@ export const lightTheme: Theme = {
       primary: '#6366f1',
       secondary: '#8b5cf6',
       disabled: '#94a3b8',
+      google: '#4285F4',
+      apple: '#000000',
     },
-  },
+    border: '#e9ecef',
+    error: '#f44336',
+    disabled: '#94a3b8',
+    },
   spacing: {
     xs: 4,
     sm: 8,
@@ -218,22 +243,27 @@ export const lightTheme: Theme = {
     h1: {
       fontSize: 32,
       fontWeight: 'bold',
+      fontFamily: 'Anuphan-Thai-700',
     },
     h2: {
       fontSize: 24,
       fontWeight: '600',
+      fontFamily: 'Anuphan-Thai-600',
     },
     h3: {
       fontSize: 20,
       fontWeight: '600',
+      fontFamily: 'Anuphan-Thai-600',
     },
     body: {
       fontSize: 16,
       fontWeight: 'normal',
+      fontFamily: 'Anuphan-Thai-400',
     },
     caption: {
       fontSize: 12,
       fontWeight: '500',
+      fontFamily: 'Anuphan-Thai-500',
     },
   },
   borderRadius: {

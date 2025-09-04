@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { VideoPlayer } from '../../modules/video/player/VideoPlayer';
 import { LinearGradient } from 'expo-linear-gradient';
+import { usePiPStore } from '../../store/pipStore';
+import { useVideoPlayer } from '../../modules/video/hooks';
 
 // ActionButton component extracted for clarity
 const ActionButton = ({ icon, label }: { icon: string; label: string }) => (
@@ -13,6 +15,8 @@ const ActionButton = ({ icon, label }: { icon: string; label: string }) => (
 
 export const PlayerScreen: React.FC = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const { enterPiPMode, isPiPMode } = usePiPStore();
+  const { videoState } = useVideoPlayer();
 
   const creator = {
     name: 'Sergi Martínez Miró',
@@ -27,12 +31,46 @@ export const PlayerScreen: React.FC = () => {
     comments: 428,
   };
 
+  const handlePiPToggle = (videoRef?: any, currentTime?: number, isPlaying?: boolean) => {
+    // Use current video URL or fallback to sample
+    const currentVideoUrl = videoState.currentVideoUrl || 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4';
+    const videoTitle = videoState.currentVideoTitle || 'From Dawn to Dusk in Tokyo: ...';
+    
+    // Use passed parameters or fallback to state
+    const actualCurrentTime = currentTime !== undefined ? currentTime : (videoState.currentTime || 0);
+    const actualIsPlaying = isPlaying !== undefined ? isPlaying : (videoState.isPlaying || false);
+    
+    console.log('PiP Toggle - Video State:', {
+      currentVideoUrl,
+      videoTitle,
+      currentTime: actualCurrentTime,
+      isPlaying: actualIsPlaying,
+      videoRef: !!videoRef
+    });
+    
+    if (currentVideoUrl) {
+      // Store current video state before entering PiP
+      enterPiPMode(
+        currentVideoUrl,
+        videoTitle,
+        actualCurrentTime,
+        actualIsPlaying,
+        videoRef
+      );
+    }
+  };
+
+  // Don't render PlayerScreen when PiP mode is active
+  if (isPiPMode) {
+    return null;
+  }
 
   return (
     <View style={styles.container}>
       <VideoPlayer
         autoPlay={true}
         onFullscreenToggle={() => setIsFullscreen(!isFullscreen)}
+        onPiPToggle={handlePiPToggle}
       />
 
       {/* Show UI only when not in fullscreen */}
@@ -68,6 +106,10 @@ export const PlayerScreen: React.FC = () => {
             <ActionButton icon="👎" label="2" />
             <ActionButton icon="🔗" label="Share" />
             <ActionButton icon="⬇️" label="Download" />
+            <TouchableOpacity style={styles.actionBtn} onPress={handlePiPToggle}>
+              <Text style={styles.actionIcon}>📺</Text>
+              <Text style={styles.actionLabel}>PiP</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Comments */}

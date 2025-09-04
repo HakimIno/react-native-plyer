@@ -10,3 +10,4 @@ export { useVideoPlayer } from './useVideoPlayer';
 export { useChatSystem } from './useChatSystem';
 export { usePinchGesture } from './usePinchGesture';
 export { useChatPanel } from './useChatPanel';
+export { useThumbnailCache } from './useThumbnailCache';

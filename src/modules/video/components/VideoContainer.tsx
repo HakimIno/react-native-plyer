@@ -51,6 +51,7 @@ interface VideoContainerProps {
   onSeekTo: (time: number) => void;
   onFullscreenPress: () => void;
   onOptionsPress: () => void;
+  onPiPPress?: () => void;
   style?: any;
   resizeMode?: 'contain' | 'cover' | 'stretch';
   playButtonSize?: number;
@@ -95,6 +96,7 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
   onSeekTo,
   onFullscreenPress,
   onOptionsPress,
+  onPiPPress,
   style,
   resizeMode = 'contain',
   playButtonSize = 70,
@@ -202,6 +204,7 @@ export const VideoContainer: React.FC<VideoContainerProps> = ({
           onFullscreenPress={onFullscreenPress}
           onOptionsPress={onOptionsPress}
           onChatPress={handleChatPress}
+          onPiPPress={onPiPPress}
           playButtonSize={playButtonSize}
           seekButtonSize={seekButtonSize}
           seekSeconds={seekSeconds}

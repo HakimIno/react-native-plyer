@@ -53,6 +53,7 @@ interface VideoPlayerProps {
   onFullscreenToggle?: (isFullscreen: boolean) => void;
   onVideoLoad?: (data: any) => void;
   onVideoEnd?: () => void;
+  onPiPToggle?: (videoRef: any, currentTime: number, isPlaying: boolean) => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({
@@ -78,6 +79,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
   onFullscreenToggle,
   onVideoLoad,
   onVideoEnd,
+  onPiPToggle,
 }) => {
   // State
   const [isBottomSheetVisible, setIsBottomSheetVisible] = useState(false);
@@ -176,6 +178,12 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
     showControlsHandler();
   };
 
+  const handlePiPPress = () => {
+    // Get current video ref and state from useVideoPlayer hook
+    // The videoRef is managed by the useVideoPlayer hook
+    onPiPToggle?.(null, videoState.currentTime, videoState.isPlaying);
+  };
+
   const handleBottomSheetClose = () => {
     setIsBottomSheetVisible(false);
   };
@@ -241,6 +249,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({
           onSeekTo={handleSeekTo}
           onFullscreenPress={handleFullscreenPress}
           onOptionsPress={handleOptionsPress}
+          onPiPPress={handlePiPPress}
           style={style}
           resizeMode={resizeMode}
           playButtonSize={playButtonSize}

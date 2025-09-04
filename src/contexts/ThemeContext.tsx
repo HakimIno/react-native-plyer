@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MMKV } from 'react-native-mmkv';
 import { Theme, themes, defaultTheme } from '../constants/theme';
+
+// Initialize MMKV storage
+const storage = new MMKV();
 
 interface ThemeContextType {
   theme: Theme;
@@ -29,9 +32,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     loadSavedTheme();
   }, []);
 
-  const loadSavedTheme = async () => {
+  const loadSavedTheme = () => {
     try {
-      const savedTheme = await AsyncStorage.getItem('selectedTheme');
+      const savedTheme = storage.getString('selectedTheme');
       if (savedTheme && themes[savedTheme as keyof typeof themes]) {
         setCurrentThemeName(savedTheme);
         setCurrentTheme(themes[savedTheme as keyof typeof themes]);
@@ -41,13 +44,13 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     }
   };
 
-  const setTheme = async (themeName: string) => {
+  const setTheme = (themeName: string) => {
     if (themes[themeName as keyof typeof themes]) {
       setCurrentThemeName(themeName);
       setCurrentTheme(themes[themeName as keyof typeof themes]);
       
       try {
-        await AsyncStorage.setItem('selectedTheme', themeName);
+        storage.set('selectedTheme', themeName);
       } catch (error) {
         console.error('Error saving theme:', error);
       }
